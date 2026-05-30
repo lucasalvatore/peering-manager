@@ -880,10 +880,6 @@ class RoutingPolicyForm(PeeringManagerModelForm):
         widget=StaticSelect,
         help_text="Action applied to routes not matched by any term",
     )
-    communities = DynamicModelMultipleChoiceField(
-        required=False, queryset=Community.objects.all()
-    )
-    local_context_data = JSONField(required=False)
     tags = TagField(required=False)
     fieldsets = (
         (
@@ -896,10 +892,8 @@ class RoutingPolicyForm(PeeringManagerModelForm):
                 "weight",
                 "address_family",
                 "default_action",
-                "communities",
             ),
         ),
-        ("Config Context", ("local_context_data",)),
     )
 
     class Meta:
@@ -913,8 +907,6 @@ class RoutingPolicyForm(PeeringManagerModelForm):
             "weight",
             "address_family",
             "default_action",
-            "communities",
-            "local_context_data",
             "tags",
         )
 
