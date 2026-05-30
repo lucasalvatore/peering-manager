@@ -1,0 +1,68 @@
+{% extends 'generic/edit.html' %}
+{% load helpers %}
+
+{% block form %}
+{# Renders the visible fields plus the hidden regexps JSON input #}
+{% include 'generic/form.html' %}
+
+{{ initial_regexps|json_script:"initial-regexps" }}
+
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <strong>Expressions</strong>
+    <button type="button" class="btn btn-sm btn-primary" id="add-regexp">
+      <i class="fa-fw fa-solid fa-plus"></i> Add expression
+    </button>
+  </div>
+  <div class="card-body">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>AS-path regular expression</th><th style="width:1%"></th></tr></thead>
+      <tbody id="regexp-rows"></tbody>
+    </table>
+    <small class="text-muted">One AS-path regex per row, e.g. <code>^1299 .*</code> or <code>.* 174$</code></small>
+  </div>
+</div>
+
+<script type="text/javascript">
+(function () {
+  function readSeed(hiddenId, scriptId) {
+    const hidden = document.getElementById(hiddenId);
+    if (hidden && hidden.value.trim()) {
+      try {
+        const parsed = JSON.parse(hidden.value);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) { /* fall through */ }
+    }
+    try {
+      return JSON.parse(document.getElementById(scriptId).textContent) || [];
+    } catch (e) { return []; }
+  }
+
+  function addRow(value) {
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      `<td><input type="text" class="form-control form-control-sm regexp-value" value="${value == null ? "" : value}" placeholder="^1299 .*"></td>` +
+      `<td><button type="button" class="btn btn-sm btn-danger row-remove"><i class="fa-fw fa-solid fa-trash"></i></button></td>`;
+    tr.querySelector(".row-remove").addEventListener("click", () => tr.remove());
+    document.getElementById("regexp-rows").appendChild(tr);
+  }
+
+  function collect() {
+    const out = [];
+    document.querySelectorAll("#regexp-rows .regexp-value").forEach(inp => {
+      const v = inp.value.trim();
+      if (v) out.push(v);
+    });
+    return out;
+  }
+
+  const field = document.getElementById("id_regexps");
+  field.closest("form").addEventListener("submit", function () {
+    field.value = JSON.stringify(collect());
+  });
+
+  readSeed("id_regexps", "initial-regexps").forEach(addRow);
+  document.getElementById("add-regexp").addEventListener("click", () => addRow(""));
+})();
+</script>
+{% endblock form %}

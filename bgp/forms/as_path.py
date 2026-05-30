@@ -1,3 +1,4 @@
+from django import forms
 from taggit.forms import TagField
 
 from peering_manager.forms import (
@@ -14,14 +15,13 @@ __all__ = ("ASPathBulkEditForm", "ASPathFilterForm", "ASPathForm")
 
 class ASPathForm(PeeringManagerModelForm):
     slug = SlugField(max_length=255)
-    regexps = JSONField(
-        required=False,
-        help_text='List of AS-path regular expressions, e.g. ["^1299 .*", ".* 174$"]',
-    )
+    # Built by the row editor in templates/bgp/aspath/edit.html (one regexp per
+    # row) and submitted as a JSON list of strings.
+    regexps = JSONField(required=False, widget=forms.HiddenInput())
     local_context_data = JSONField(required=False)
     tags = TagField(required=False)
     fieldsets = (
-        ("AS Path", ("name", "slug", "description", "regexps")),
+        ("AS Path", ("name", "slug", "description")),
         ("Config Context", ("local_context_data",)),
     )
 

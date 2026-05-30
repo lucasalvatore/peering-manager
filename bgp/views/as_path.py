@@ -46,6 +46,12 @@ class ASPathView(ObjectView):
 class ASPathEdit(ObjectEditView):
     queryset = ASPath.objects.all()
     form = ASPathForm
+    template_name = "bgp/aspath/edit.html"
+
+    def get_extra_context(self, request, instance):
+        return {
+            "initial_regexps": instance.regexps if instance and instance.pk else [],
+        }
 
 
 @register_model_view(ASPath, name="delete")

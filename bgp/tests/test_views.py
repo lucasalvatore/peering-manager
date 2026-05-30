@@ -93,3 +93,34 @@ class PrefixListEditorViewTestCase(TestCase):
         resp = client.get(reverse("bgp:prefixlist_add"))
         self.assertContains(resp, 'id="prefix-rows"')
         self.assertContains(resp, 'id="editor-config"')
+
+
+class ASPathEditorViewTestCase(TestCase):
+    """The AS-path editor posts regexps as a JSON list via a hidden field."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username="asp-editor", password="x", is_superuser=True, is_staff=True
+        )
+
+    def test_add_view_persists_regexps(self):
+        client = Client()
+        client.force_login(self.user)
+        resp = client.post(
+            reverse("bgp:aspath_add"),
+            data={
+                "name": "ASPATH-TESTVIEW",
+                "slug": "aspath-testview",
+                "regexps": json.dumps(["^1299 .*", ".* 174$"]),
+            },
+        )
+        self.assertEqual(resp.status_code, 302)
+        obj = ASPath.objects.get(name="ASPATH-TESTVIEW")
+        self.assertEqual(obj.regexps, ["^1299 .*", ".* 174$"])
+
+    def test_editor_page_renders_row_editor(self):
+        client = Client()
+        client.force_login(self.user)
+        resp = client.get(reverse("bgp:aspath_add"))
+        self.assertContains(resp, 'id="regexp-rows"')
