@@ -6,7 +6,10 @@ from ..models import (
     DirectPeeringSession,
     InternetExchange,
     InternetExchangePeeringSession,
+    PolicyTerm,
     RoutingPolicy,
+    TermAction,
+    TermMatch,
 )
 
 __all__ = (
@@ -15,7 +18,10 @@ __all__ = (
     "NestedDirectPeeringSessionSerializer",
     "NestedInternetExchangePeeringSessionSerializer",
     "NestedInternetExchangeSerializer",
+    "NestedPolicyTermSerializer",
     "NestedRoutingPolicySerializer",
+    "NestedTermActionSerializer",
+    "NestedTermMatchSerializer",
 )
 
 
@@ -70,3 +76,21 @@ class NestedRoutingPolicySerializer(WritableNestedSerializer):
     class Meta:
         model = RoutingPolicy
         fields = ["id", "url", "display_url", "display", "name", "slug", "type"]
+
+
+class NestedPolicyTermSerializer(WritableNestedSerializer):
+    class Meta:
+        model = PolicyTerm
+        fields = ["id", "url", "display_url", "display", "name", "sequence", "action"]
+
+
+class NestedTermMatchSerializer(WritableNestedSerializer):
+    class Meta:
+        model = TermMatch
+        fields = ["id", "url", "display_url", "display", "match_type", "values"]
+
+
+class NestedTermActionSerializer(WritableNestedSerializer):
+    class Meta:
+        model = TermAction
+        fields = ["id", "url", "display_url", "display", "action_type", "value"]

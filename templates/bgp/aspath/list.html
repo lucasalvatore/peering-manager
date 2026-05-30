@@ -1,0 +1,22 @@
+{% extends '_base.html' %}
+{% load render_table from django_tables2 %}
+{% block actions %}
+{% if perms.bgp.add_aspath %}
+<a href="{% url 'bgp:aspath_add' %}" class="btn btn-primary">
+  <i class="fa-fw fa-solid fa-plus"></i> Add
+</a>
+{% endif %}
+{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">{% block title %}AS Paths{% endblock %}</li>
+{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-9">
+    {% include 'generic/object_list.html' with table_modal='ASPathTable_config' bulk_edit_url='bgp:aspath_bulk_edit' bulk_delete_url='bgp:aspath_bulk_delete' %}
+  </div>
+  <div class="col-md-3">
+    {% include 'utils/search_form.html' %}
+  </div>
+</div>
+{% endblock %}

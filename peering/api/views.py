@@ -20,7 +20,10 @@ from ..filtersets import (
     DirectPeeringSessionFilterSet,
     InternetExchangeFilterSet,
     InternetExchangePeeringSessionFilterSet,
+    PolicyTermFilterSet,
     RoutingPolicyFilterSet,
+    TermActionFilterSet,
+    TermMatchFilterSet,
 )
 from ..jobs import import_sessions_to_internet_exchange
 from ..models import (
@@ -29,8 +32,12 @@ from ..models import (
     DirectPeeringSession,
     InternetExchange,
     InternetExchangePeeringSession,
+    PolicyTerm,
     RoutingPolicy,
+    TermAction,
+    TermMatch,
 )
+from ..policy_render import render_preview
 from .serializers import (
     AutonomousSystemSerializer,
     BGPGroupSerializer,
@@ -38,7 +45,10 @@ from .serializers import (
     InternetExchangePeeringSessionSerializer,
     InternetExchangeSerializer,
     NestedInternetExchangeSerializer,
+    PolicyTermSerializer,
     RoutingPolicySerializer,
+    TermActionSerializer,
+    TermMatchSerializer,
 )
 
 
@@ -594,3 +604,35 @@ class RoutingPolicyViewSet(PeeringManagerModelViewSet):
     queryset = RoutingPolicy.objects.all()
     serializer_class = RoutingPolicySerializer
     filterset_class = RoutingPolicyFilterSet
+
+    @extend_schema(
+        operation_id="peering_routing_policies_rendered",
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Junos policy-statement preview of the structured policy",
+            )
+        },
+    )
+    @action(detail=True, methods=["get"], url_path="rendered")
+    def rendered(self, request, pk=None):
+        routing_policy = self.get_object()
+        return Response({"preview": render_preview(routing_policy)})
+
+
+class PolicyTermViewSet(PeeringManagerModelViewSet):
+    queryset = PolicyTerm.objects.all()
+    serializer_class = PolicyTermSerializer
+    filterset_class = PolicyTermFilterSet
+
+
+class TermMatchViewSet(PeeringManagerModelViewSet):
+    queryset = TermMatch.objects.all()
+    serializer_class = TermMatchSerializer
+    filterset_class = TermMatchFilterSet
+
+
+class TermActionViewSet(PeeringManagerModelViewSet):
+    queryset = TermAction.objects.all()
+    serializer_class = TermActionSerializer
+    filterset_class = TermActionFilterSet

@@ -4,7 +4,7 @@ from bgp.models import Relationship
 from net.models import Connection
 from utils.testing import ViewTestCases
 
-from ..enums import BGPSessionStatus, RoutingPolicyType
+from ..enums import BGPSessionStatus, PolicyTermAction, RoutingPolicyType
 from ..models import *
 
 
@@ -267,6 +267,7 @@ class RoutingPolicyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "type": RoutingPolicyType.IMPORT,
             "address_family": 6,
             "weight": 1,
+            "default_action": PolicyTermAction.REJECT,
             "comments": "",
             "tags": [],
         }

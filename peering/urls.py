@@ -82,4 +82,15 @@ urlpatterns = [
         "routing-policies/<int:pk>/",
         include(get_model_urls(app_label="peering", model_name="routingpolicy")),
     ),
+    # Policy terms
+    path(
+        "policy-terms/",
+        include(
+            get_model_urls(app_label="peering", model_name="policyterm", detail=False)
+        ),
+    ),
+    path(
+        "policy-terms/<int:pk>/",
+        include(get_model_urls(app_label="peering", model_name="policyterm")),
+    ),
 ]

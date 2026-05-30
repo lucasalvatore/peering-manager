@@ -1,0 +1,43 @@
+{% extends 'bgp/prefixlist/_base.html' %}
+{% load helpers %}
+{% block subcontent %}
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header"><strong>Prefix List Details</strong></div>
+      <table class="card-body table table-hover attr-table mb-0">
+        <tr><td>Name</td><td>{{ instance.name }}</td></tr>
+        <tr><td>Slug</td><td>{{ instance.slug }}</td></tr>
+        <tr><td>Description</td><td>{{ instance.description|render_none }}</td></tr>
+        <tr><td>Family</td><td>{{ instance.get_family_display }}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    {% include 'includes/tags_card.html' with tags=instance.tags.all url='bgp:prefixlist_list' %}
+  </div>
+</div>
+<div class="row">
+  <div class="col-md-12">
+    <div class="card mb-3">
+      <div class="card-header"><strong>Prefixes</strong></div>
+      <table class="card-body table table-hover mb-0">
+        <thead>
+          <tr><th>Prefix</th><th>Match type</th><th>Parameters</th></tr>
+        </thead>
+        <tbody>
+          {% for member in instance.prefixes %}
+          <tr>
+            <td><code>{{ member.prefix }}</code></td>
+            <td>{{ member.type|default:"exact" }}</td>
+            <td>{{ member.params|default_if_none:"" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-muted">No prefixes defined.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

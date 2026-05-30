@@ -12,16 +12,27 @@ from devices.api.serializers import NestedRouterSerializer
 from extras.api.serializers import NestedIXAPISerializer
 from net.api.serializers import NestedBFDSerializer, NestedConnectionSerializer
 from peering_manager.api.fields import ChoiceField, SerializedPKRelatedField
-from peering_manager.api.serializers import PeeringManagerModelSerializer
+from peering_manager.api.serializers import (
+    PeeringManagerModelSerializer,
+    ValidatedModelSerializer,
+)
 
-from ..enums import BGPGroupStatus, BGPSessionStatus, IPFamily
+from ..enums import (
+    BGPGroupStatus,
+    BGPSessionStatus,
+    IPFamily,
+    PolicyTermAction,
+)
 from ..models import (
     AutonomousSystem,
     BGPGroup,
     DirectPeeringSession,
     InternetExchange,
     InternetExchangePeeringSession,
+    PolicyTerm,
     RoutingPolicy,
+    TermAction,
+    TermMatch,
 )
 from .nested_serializers import *
 
@@ -40,9 +51,12 @@ __all__ = (
     "NestedInternetExchangePeeringSessionSerializer",
     "NestedInternetExchangeSerializer",
     "NestedRoutingPolicySerializer",
+    "PolicyTermSerializer",
     "RouterConfigureSerializer",
     "RouterSerializer",
     "RoutingPolicySerializer",
+    "TermActionSerializer",
+    "TermMatchSerializer",
 )
 
 
@@ -373,13 +387,71 @@ class InternetExchangePeeringSessionSerializer(PeeringManagerModelSerializer):
         ]
 
 
+class TermMatchSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = TermMatch
+        fields = [
+            "id",
+            "url",
+            "display_url",
+            "display",
+            "term",
+            "match_type",
+            "values",
+            "created",
+            "updated",
+        ]
+
+
+class TermActionSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = TermAction
+        fields = [
+            "id",
+            "url",
+            "display_url",
+            "display",
+            "term",
+            "action_type",
+            "value",
+            "created",
+            "updated",
+        ]
+
+
+class PolicyTermSerializer(ValidatedModelSerializer):
+    action = ChoiceField(choices=PolicyTermAction, required=False)
+    matches = TermMatchSerializer(many=True, read_only=True)
+    actions = TermActionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = PolicyTerm
+        fields = [
+            "id",
+            "url",
+            "display_url",
+            "display",
+            "routing_policy",
+            "name",
+            "sequence",
+            "action",
+            "description",
+            "matches",
+            "actions",
+            "created",
+            "updated",
+        ]
+
+
 class RoutingPolicySerializer(PeeringManagerModelSerializer):
+    default_action = ChoiceField(choices=PolicyTermAction, required=False)
     communities = SerializedPKRelatedField(
         queryset=Community.objects.all(),
         serializer=NestedCommunitySerializer,
         required=False,
         many=True,
     )
+    terms = PolicyTermSerializer(many=True, read_only=True)
 
     class Meta:
         model = RoutingPolicy
@@ -394,7 +466,9 @@ class RoutingPolicySerializer(PeeringManagerModelSerializer):
             "type",
             "weight",
             "address_family",
+            "default_action",
             "communities",
+            "terms",
             "local_context_data",
             "config_context",
             "tags",

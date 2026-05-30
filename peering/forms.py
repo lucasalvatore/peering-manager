@@ -36,6 +36,7 @@ from .enums import (
     BGPSessionStatus,
     BGPState,
     IPFamily,
+    PolicyTermAction,
     RoutingPolicyType,
 )
 from .models import (
@@ -44,6 +45,7 @@ from .models import (
     DirectPeeringSession,
     InternetExchange,
     InternetExchangePeeringSession,
+    PolicyTerm,
     RoutingPolicy,
 )
 
@@ -872,6 +874,11 @@ class RoutingPolicyForm(PeeringManagerModelForm):
     slug = SlugField(max_length=255)
     type = forms.ChoiceField(choices=RoutingPolicyType, widget=StaticSelect)
     address_family = forms.ChoiceField(choices=IPFamily, widget=StaticSelect)
+    default_action = forms.ChoiceField(
+        choices=PolicyTermAction,
+        widget=StaticSelect,
+        help_text="Action applied to routes not matched by any term",
+    )
     communities = DynamicModelMultipleChoiceField(
         required=False, queryset=Community.objects.all()
     )
@@ -887,6 +894,7 @@ class RoutingPolicyForm(PeeringManagerModelForm):
                 "type",
                 "weight",
                 "address_family",
+                "default_action",
                 "communities",
             ),
         ),
@@ -903,10 +911,100 @@ class RoutingPolicyForm(PeeringManagerModelForm):
             "type",
             "weight",
             "address_family",
+            "default_action",
             "communities",
             "local_context_data",
             "tags",
         )
+
+
+class PolicyTermForm(PeeringManagerModelForm):
+    """
+    Edit a single policy term. Matches and actions are edited as JSON lists and
+    synced to their child rows on save, e.g.::
+
+        matches: [{"match_type": "prefix-list", "values": ["PLIST-V4-..."]}]
+        actions: [{"action_type": "local-preference", "value": "200"}]
+    """
+
+    routing_policy = DynamicModelChoiceField(queryset=RoutingPolicy.objects.all())
+    action = forms.ChoiceField(choices=PolicyTermAction, widget=StaticSelect)
+    matches = JSONField(
+        required=False,
+        help_text='from {...} conditions, e.g. [{"match_type": "community", '
+        '"values": ["CLIST-DAL-TRANSIT"]}]',
+    )
+    actions = JSONField(
+        required=False,
+        help_text='action modifiers, e.g. [{"action_type": "local-preference", '
+        '"value": "200"}]',
+    )
+    fieldsets = (
+        (
+            "Term",
+            ("routing_policy", "name", "sequence", "action", "description"),
+        ),
+        ("Match conditions", ("matches",)),
+        ("Actions", ("actions",)),
+    )
+
+    class Meta:
+        model = PolicyTerm
+        fields = (
+            "routing_policy",
+            "name",
+            "sequence",
+            "action",
+            "description",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Pre-populate the JSON editors from existing child rows.
+        if self.instance and self.instance.pk:
+            self.fields["matches"].initial = [
+                {"match_type": m.match_type, "values": m.values}
+                for m in self.instance.matches.all()
+            ]
+            self.fields["actions"].initial = [
+                {"action_type": a.action_type, "value": a.value}
+                for a in self.instance.actions.all()
+            ]
+
+    def clean_matches(self):
+        data = self.cleaned_data.get("matches") or []
+        if not isinstance(data, list):
+            raise ValidationError("Matches must be a list of objects.")
+        for item in data:
+            if not isinstance(item, dict) or "match_type" not in item:
+                raise ValidationError(
+                    'Each match needs a "match_type" and a "values" list.'
+                )
+        return data
+
+    def clean_actions(self):
+        data = self.cleaned_data.get("actions") or []
+        if not isinstance(data, list):
+            raise ValidationError("Actions must be a list of objects.")
+        for item in data:
+            if not isinstance(item, dict) or "action_type" not in item:
+                raise ValidationError('Each action needs an "action_type".')
+        return data
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        # Replace child matches/actions with the submitted JSON.
+        instance.matches.all().delete()
+        for item in self.cleaned_data.get("matches") or []:
+            instance.matches.create(
+                match_type=item["match_type"], values=item.get("values") or []
+            )
+        instance.actions.all().delete()
+        for item in self.cleaned_data.get("actions") or []:
+            instance.actions.create(
+                action_type=item["action_type"], value=item.get("value")
+            )
+        return instance
 
 
 class RoutingPolicyBulkEditForm(PeeringManagerModelBulkEditForm):

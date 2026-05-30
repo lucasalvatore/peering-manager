@@ -16,19 +16,29 @@ from bgp.models import Relationship
 from devices.models import Router
 from net.models import BFD, Connection
 from peering_manager.filtersets import (
+    ChangeLoggedModelFilterSet,
     OrganisationalModelFilterSet,
     PeeringManagerModelFilterSet,
 )
 from peeringdb.models import Network, NetworkIXLan
 
-from .enums import BGPGroupStatus, BGPSessionStatus, BGPState, RoutingPolicyType
+from .enums import (
+    BGPGroupStatus,
+    BGPSessionStatus,
+    BGPState,
+    PolicyTermAction,
+    RoutingPolicyType,
+)
 from .models import (
     AutonomousSystem,
     BGPGroup,
     DirectPeeringSession,
     InternetExchange,
     InternetExchangePeeringSession,
+    PolicyTerm,
     RoutingPolicy,
+    TermAction,
+    TermMatch,
 )
 
 
@@ -375,3 +385,31 @@ class RoutingPolicyFilterSet(OrganisationalModelFilterSet):
         for v in value:
             qs_filter |= Q(type=v)
         return queryset.filter(qs_filter)
+
+
+class PolicyTermFilterSet(ChangeLoggedModelFilterSet):
+    q = django_filters.CharFilter(method="search", label="Search")
+    action = django_filters.MultipleChoiceFilter(choices=PolicyTermAction)
+
+    class Meta:
+        model = PolicyTerm
+        fields = ["id", "routing_policy", "name", "sequence", "action"]
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(name__icontains=value) | Q(description__icontains=value)
+        )
+
+
+class TermMatchFilterSet(ChangeLoggedModelFilterSet):
+    class Meta:
+        model = TermMatch
+        fields = ["id", "term", "match_type"]
+
+
+class TermActionFilterSet(ChangeLoggedModelFilterSet):
+    class Meta:
+        model = TermAction
+        fields = ["id", "term", "action_type"]

@@ -116,6 +116,7 @@ class RoutingPolicyTest(TestCase):
                 "type": RoutingPolicyType.IMPORT,
                 "weight": 0,
                 "address_family": 0,
+                "default_action": PolicyTermAction.REJECT,
             }
         )
         self.assertTrue(test.is_valid())

@@ -9,6 +9,7 @@ from ..models import (
     DirectPeeringSession,
     InternetExchange,
     InternetExchangePeeringSession,
+    PolicyTerm,
     RoutingPolicy,
 )
 from .columns import BGPSessionStateColumn, RoutingPolicyColumn
@@ -346,3 +347,26 @@ class RoutingPolicyTable(PeeringManagerTable):
             "actions",
         )
         default_columns = ("pk", "name", "type", "weight", "address_family", "actions")
+
+
+POLICY_TERM_ACTION = """<span class="badge text-bg-{{ record.get_action_colour }}">{{ record.get_action_display }}</span>"""
+
+
+class PolicyTermTable(PeeringManagerTable):
+    name = tables.Column(linkify=True)
+    routing_policy = tables.Column(linkify=True)
+    action = tables.TemplateColumn(template_code=POLICY_TERM_ACTION)
+
+    class Meta(PeeringManagerTable.Meta):
+        model = PolicyTerm
+        fields = (
+            "pk",
+            "id",
+            "routing_policy",
+            "name",
+            "sequence",
+            "action",
+            "description",
+            "actions",
+        )
+        default_columns = ("pk", "routing_policy", "name", "sequence", "action")

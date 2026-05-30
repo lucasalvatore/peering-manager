@@ -73,3 +73,19 @@ class RoutingPolicyType(ChoiceSet):
     IMPORT_EXPORT = "import-export-policy"
 
     CHOICES = ((EXPORT, "Export"), (IMPORT, "Import"), (IMPORT_EXPORT, "Import+Export"))
+
+
+class PolicyTermAction(ChoiceSet):
+    """Action taken by a routing-policy term (or the policy default-action)."""
+
+    ACCEPT = "accept"
+    REJECT = "reject"
+    NEXT_TERM = "next-term"
+    NEXT_POLICY = "next-policy"
+
+    CHOICES = (
+        (ACCEPT, "Accept", "success"),
+        (REJECT, "Reject", "danger"),
+        (NEXT_TERM, "Next term", "secondary"),
+        (NEXT_POLICY, "Next policy", "secondary"),
+    )

@@ -18,3 +18,37 @@ class CommunityType(ChoiceSet):
     INGRESS = "ingress"
 
     CHOICES = ((EGRESS, "Egress"), (INGRESS, "Ingress"))
+
+
+class PrefixListFamily(ChoiceSet):
+    ANY = 0
+    IPV4 = 4
+    IPV6 = 6
+
+    CHOICES = ((ANY, "Any"), (IPV4, "IPv4"), (IPV6, "IPv6"))
+
+
+class PrefixListMatchType(ChoiceSet):
+    """
+    Per-member prefix match qualifiers, mirroring Junos route-filter match
+    types. Stored on each prefix-list member so the policy preview can render
+    the appropriate qualifier.
+    """
+
+    EXACT = "exact"
+    LONGER = "longer"
+    ORLONGER = "orlonger"
+    THROUGH = "through"
+    UPTO = "upto"
+    PREFIX_LENGTH_RANGE = "prefix-length-range"
+    ADDRESS_MASK = "address-mask"
+
+    CHOICES = (
+        (EXACT, "exact"),
+        (LONGER, "longer"),
+        (ORLONGER, "orlonger"),
+        (THROUGH, "through"),
+        (UPTO, "upto"),
+        (PREFIX_LENGTH_RANGE, "prefix-length-range"),
+        (ADDRESS_MASK, "address-mask"),
+    )

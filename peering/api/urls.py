@@ -13,6 +13,9 @@ router.register(
     "internet-exchange-peering-sessions", views.InternetExchangePeeringSessionViewSet
 )
 router.register("routing-policies", views.RoutingPolicyViewSet)
+router.register("policy-terms", views.PolicyTermViewSet)
+router.register("term-matches", views.TermMatchViewSet)
+router.register("term-actions", views.TermActionViewSet)
 
 app_name = "peering-api"
 urlpatterns = router.urls

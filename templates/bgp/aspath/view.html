@@ -1,0 +1,35 @@
+{% extends 'bgp/aspath/_base.html' %}
+{% load helpers %}
+{% block subcontent %}
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header"><strong>AS Path Details</strong></div>
+      <table class="card-body table table-hover attr-table mb-0">
+        <tr><td>Name</td><td>{{ instance.name }}</td></tr>
+        <tr><td>Slug</td><td>{{ instance.slug }}</td></tr>
+        <tr><td>Description</td><td>{{ instance.description|render_none }}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    {% include 'includes/tags_card.html' with tags=instance.tags.all url='bgp:aspath_list' %}
+  </div>
+</div>
+<div class="row">
+  <div class="col-md-12">
+    <div class="card mb-3">
+      <div class="card-header"><strong>Expressions</strong></div>
+      <table class="card-body table table-hover mb-0">
+        <tbody>
+          {% for expr in instance.regexps %}
+          <tr><td><code>{{ expr }}</code></td></tr>
+          {% empty %}
+          <tr><td class="text-muted">No expressions defined.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

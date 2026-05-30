@@ -15,7 +15,12 @@ from netfields import InetAddressField
 
 from bgp.models import Relationship
 from net.models import Connection
-from peering_manager.models import JournalingMixin, OrganisationalModel, PrimaryModel
+from peering_manager.models import (
+    ChangeLoggedModel,
+    JournalingMixin,
+    OrganisationalModel,
+    PrimaryModel,
+)
 from peeringdb.functions import get_shared_facilities, get_shared_internet_exchanges
 from peeringdb.models import (
     HiddenPeer,
@@ -25,7 +30,7 @@ from peeringdb.models import (
     NetworkIXLan,
 )
 
-from ..enums import BGPState, IPFamily, RoutingPolicyType
+from ..enums import BGPState, IPFamily, PolicyTermAction, RoutingPolicyType
 from ..fields import ASNField
 from ..functions import (
     UnresolvableIRRObjectError,
@@ -44,7 +49,10 @@ __all__ = (
     "DirectPeeringSession",
     "InternetExchange",
     "InternetExchangePeeringSession",
+    "PolicyTerm",
     "RoutingPolicy",
+    "TermAction",
+    "TermMatch",
 )
 
 logger = logging.getLogger("peering.manager.peering")
@@ -1141,6 +1149,12 @@ class RoutingPolicy(OrganisationalModel):
     address_family = models.PositiveSmallIntegerField(
         default=IPFamily.ALL, choices=IPFamily
     )
+    default_action = models.CharField(
+        max_length=50,
+        choices=PolicyTermAction,
+        default=PolicyTermAction.REJECT,
+        help_text="Action applied to routes not matched by any term",
+    )
     communities = models.ManyToManyField("bgp.Community", blank=True)
 
     class Meta:
@@ -1168,3 +1182,98 @@ class RoutingPolicy(OrganisationalModel):
             text = self.name
 
         return mark_safe(f'<span class="badge {badge_type}">{text}</span>')
+
+
+class PolicyTerm(ChangeLoggedModel):
+    """
+    A single ordered term within a `RoutingPolicy` (a Junos ``named-entry``):
+    an ordered set of `from` match conditions and an action.
+    """
+
+    routing_policy = models.ForeignKey(
+        to="RoutingPolicy",
+        on_delete=models.CASCADE,
+        related_name="terms",
+    )
+    name = models.CharField(max_length=256)
+    sequence = models.PositiveIntegerField(
+        default=0, help_text="Evaluation order within the policy (lower runs first)"
+    )
+    action = models.CharField(
+        max_length=50,
+        choices=PolicyTermAction,
+        default=PolicyTermAction.ACCEPT,
+    )
+    description = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["routing_policy", "sequence", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["routing_policy", "name"],
+                name="peering_policyterm_unique_name_per_policy",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+    def get_absolute_url(self) -> str:
+        return reverse(
+            "peering:routingpolicy", kwargs={"pk": self.routing_policy_id}
+        )
+
+    def get_action_colour(self):
+        return PolicyTermAction.colours.get(self.action)
+
+
+class TermMatch(ChangeLoggedModel):
+    """
+    A single ``from`` match condition on a `PolicyTerm`. ``match_type`` is
+    free-form (prefix-list, community, as-path, protocol, ...) and ``values``
+    holds one or more object names or literals so new condition kinds need no
+    schema change.
+    """
+
+    term = models.ForeignKey(
+        to="PolicyTerm",
+        on_delete=models.CASCADE,
+        related_name="matches",
+    )
+    match_type = models.CharField(max_length=64)
+    values = models.JSONField(blank=True, default=list)
+
+    class Meta:
+        ordering = ["term", "id"]
+        verbose_name_plural = "term matches"
+
+    def __str__(self) -> str:
+        return f"{self.match_type} {self.values}"
+
+    def get_absolute_url(self) -> str:
+        return self.term.get_absolute_url()
+
+
+class TermAction(ChangeLoggedModel):
+    """
+    A single action modifier on a `PolicyTerm` (local-preference,
+    as-path-prepend, community add/remove, metric, ...). ``action_type`` is
+    free-form; ``value`` is an optional scalar.
+    """
+
+    term = models.ForeignKey(
+        to="PolicyTerm",
+        on_delete=models.CASCADE,
+        related_name="actions",
+    )
+    action_type = models.CharField(max_length=64)
+    value = models.CharField(max_length=256, blank=True, null=True)
+
+    class Meta:
+        ordering = ["term", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.action_type} {self.value or ''}".strip()
+
+    def get_absolute_url(self) -> str:
+        return self.term.get_absolute_url()

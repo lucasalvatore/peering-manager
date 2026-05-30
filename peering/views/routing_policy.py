@@ -44,6 +44,14 @@ class RoutingPolicyView(ObjectView):
     permission_required = "peering.view_routingpolicy"
     queryset = RoutingPolicy.objects.all()
 
+    def get_extra_context(self, request, instance):
+        from ..policy_render import render_preview
+
+        return {
+            "terms": instance.terms.all(),
+            "preview": render_preview(instance),
+        }
+
 
 @register_model_view(model=RoutingPolicy, name="add", detail=False)
 @register_model_view(model=RoutingPolicy, name="edit")
