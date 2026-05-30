@@ -1,9 +1,20 @@
 {% extends 'generic/edit.html' %}
 {% load helpers %}
+{% load form_helpers %}
 
 {% block form %}
-{# Renders the visible Term fields plus the hidden matches/actions JSON inputs #}
-{% include 'generic/form.html' %}
+{# Hidden fields (incl. the matches/actions JSON the editor writes to) #}
+{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+<div class="card mb-3">
+  <div class="card-header"><strong>Term</strong></div>
+  <div class="card-body">
+    {% render_field form.routing_policy %}
+    {% render_field form.name %}
+    {% render_field form.action %}
+    {% render_field form.description %}
+  </div>
+</div>
 
 {{ editor_config|json_script:"editor-config" }}
 {{ initial_matches|json_script:"initial-matches" }}
