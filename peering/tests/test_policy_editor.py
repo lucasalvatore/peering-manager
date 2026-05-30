@@ -225,3 +225,80 @@ class PolicyTermViewSaveTestCase(TestCase):
         self.assertContains(resp, 'id="editor-config"')
         # object names are pre-populated into the editor config
         self.assertIn("PLIST-V4-X", html)
+
+    def test_new_term_is_appended_without_sequence_field(self):
+        client = Client()
+        client.force_login(self.user)
+        PolicyTerm.objects.create(
+            routing_policy=self.policy, name="FIRST", sequence=10
+        )
+        resp = client.post(
+            reverse("peering:policyterm_add"),
+            data={
+                "routing_policy": self.policy.pk,
+                "name": "SECOND",
+                "action": PolicyTermAction.ACCEPT,
+                "description": "",
+                "matches": "[]",
+                "actions": "[]",
+            },
+        )
+        self.assertEqual(resp.status_code, 302)
+        second = PolicyTerm.objects.get(routing_policy=self.policy, name="SECOND")
+        self.assertEqual(second.sequence, 20)  # appended after FIRST
+
+
+class PolicyTermMoveTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.policy = RoutingPolicy.objects.create(
+            name="RMAP-AS6939-EXPORT",
+            slug="rmap-as6939-export",
+            type=RoutingPolicyType.EXPORT,
+        )
+        cls.a = PolicyTerm.objects.create(
+            routing_policy=cls.policy, name="A", sequence=10
+        )
+        cls.b = PolicyTerm.objects.create(
+            routing_policy=cls.policy, name="B", sequence=20
+        )
+        cls.c = PolicyTerm.objects.create(
+            routing_policy=cls.policy, name="C", sequence=30
+        )
+        cls.user = get_user_model().objects.create_user(
+            username="mover", password="x", is_superuser=True, is_staff=True
+        )
+
+    def _order(self):
+        return [t.name for t in self.policy.terms.all()]
+
+    def test_move_down(self):
+        client = Client()
+        client.force_login(self.user)
+        resp = client.post(
+            reverse(
+                "peering:policyterm_move", kwargs={"pk": self.a.pk, "direction": "down"}
+            )
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(self._order(), ["B", "A", "C"])
+
+    def test_move_up(self):
+        client = Client()
+        client.force_login(self.user)
+        client.post(
+            reverse(
+                "peering:policyterm_move", kwargs={"pk": self.c.pk, "direction": "up"}
+            )
+        )
+        self.assertEqual(self._order(), ["A", "C", "B"])
+
+    def test_move_up_at_top_is_noop(self):
+        client = Client()
+        client.force_login(self.user)
+        client.post(
+            reverse(
+                "peering:policyterm_move", kwargs={"pk": self.a.pk, "direction": "up"}
+            )
+        )
+        self.assertEqual(self._order(), ["A", "B", "C"])

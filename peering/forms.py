@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.db.models import Max
 from taggit.forms import TagField
 
 from bgp.models import Community, Relationship
@@ -936,7 +937,7 @@ class PolicyTermForm(PeeringManagerModelForm):
     fieldsets = (
         (
             "Term",
-            ("routing_policy", "name", "sequence", "action", "description"),
+            ("routing_policy", "name", "action", "description"),
         ),
     )
 
@@ -945,7 +946,6 @@ class PolicyTermForm(PeeringManagerModelForm):
         fields = (
             "routing_policy",
             "name",
-            "sequence",
             "action",
             "description",
         )
@@ -971,6 +971,16 @@ class PolicyTermForm(PeeringManagerModelForm):
         return data
 
     def save(self, *args, **kwargs):
+        # New terms are appended to the end; ordering is then managed with the
+        # up/down controls rather than a user-entered sequence.
+        if self.instance.pk is None and not self.instance.sequence:
+            last = (
+                PolicyTerm.objects.filter(
+                    routing_policy=self.instance.routing_policy
+                ).aggregate(Max("sequence"))["sequence__max"]
+                or 0
+            )
+            self.instance.sequence = last + 10
         instance = super().save(*args, **kwargs)
         # Replace child matches/actions with the submitted JSON.
         instance.matches.all().delete()

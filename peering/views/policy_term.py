@@ -1,3 +1,7 @@
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.shortcuts import get_object_or_404, redirect
+from django.views.generic import View
+
 from peering_manager.views.generic import (
     ObjectDeleteView,
     ObjectEditView,
@@ -14,6 +18,7 @@ __all__ = (
     "PolicyTermDelete",
     "PolicyTermEdit",
     "PolicyTermList",
+    "PolicyTermMove",
 )
 
 
@@ -97,3 +102,24 @@ class PolicyTermEdit(ObjectEditView):
 class PolicyTermDelete(ObjectDeleteView):
     permission_required = "peering.delete_policyterm"
     queryset = PolicyTerm.objects.all()
+
+
+@register_model_view(PolicyTerm, name="move", path="move/<str:direction>")
+class PolicyTermMove(PermissionRequiredMixin, View):
+    """Swap a term with its neighbour and renumber the policy's terms."""
+
+    permission_required = "peering.change_policyterm"
+
+    def post(self, request, pk, direction):
+        term = get_object_or_404(PolicyTerm, pk=pk)
+        siblings = list(term.routing_policy.terms.all())  # ordered by sequence
+        index = [t.pk for t in siblings].index(term.pk)
+        swap = index - 1 if direction == "up" else index + 1
+        if 0 <= swap < len(siblings):
+            siblings[index], siblings[swap] = siblings[swap], siblings[index]
+            # Renumber sequentially so ordering is always well-defined.
+            for position, sibling in enumerate(siblings, start=1):
+                if sibling.sequence != position * 10:
+                    sibling.sequence = position * 10
+                    sibling.save()
+        return redirect(term.routing_policy.get_absolute_url())

@@ -57,14 +57,25 @@
       <table class="card-body table table-hover mb-0">
         <thead>
           <tr>
-            <th>Seq</th><th>Name</th><th>Match conditions</th>
+            <th style="width:1%"></th><th>Name</th><th>Match conditions</th>
             <th>Actions</th><th>Action</th><th></th>
           </tr>
         </thead>
         <tbody>
           {% for term in terms %}
           <tr>
-            <td>{{ term.sequence }}</td>
+            <td class="text-nowrap">
+              {% if perms.peering.change_policyterm %}
+              <form method="post" action="{% url 'peering:policyterm_move' pk=term.pk direction='up' %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-link p-0 me-1" title="Move up"{% if forloop.first %} disabled{% endif %}><i class="fa-fw fa-solid fa-arrow-up"></i></button>
+              </form>
+              <form method="post" action="{% url 'peering:policyterm_move' pk=term.pk direction='down' %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-link p-0" title="Move down"{% if forloop.last %} disabled{% endif %}><i class="fa-fw fa-solid fa-arrow-down"></i></button>
+              </form>
+              {% endif %}
+            </td>
             <td>{{ term.name }}</td>
             <td>
               {% for m in term.matches.all %}
