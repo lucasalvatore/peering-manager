@@ -28,17 +28,13 @@ class PrefixListForm(PeeringManagerModelForm):
         widget=StaticSelect,
         help_text="Address family this prefix-list applies to",
     )
-    prefixes = JSONField(
-        required=False,
-        help_text=(
-            "List of prefix members, e.g. "
-            '[{"prefix": "192.0.2.0/24", "type": "orlonger"}]'
-        ),
-    )
+    # Built by the structured row editor in templates/bgp/prefixlist/edit.html
+    # (prefix + match-type dropdown + per-type params) and submitted as JSON.
+    prefixes = JSONField(required=False, widget=forms.HiddenInput())
     local_context_data = JSONField(required=False)
     tags = TagField(required=False)
     fieldsets = (
-        ("Prefix List", ("name", "slug", "description", "family", "prefixes")),
+        ("Prefix List", ("name", "slug", "description", "family")),
         ("Config Context", ("local_context_data",)),
     )
 

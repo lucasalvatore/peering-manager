@@ -1,0 +1,105 @@
+{% extends 'generic/edit.html' %}
+{% load helpers %}
+
+{% block form %}
+{# Renders the visible fields plus the hidden prefixes JSON input #}
+{% include 'generic/form.html' %}
+
+{{ editor_config|json_script:"editor-config" }}
+{{ initial_prefixes|json_script:"initial-prefixes" }}
+
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <strong>Prefixes</strong>
+    <button type="button" class="btn btn-sm btn-primary" id="add-prefix">
+      <i class="fa-fw fa-solid fa-plus"></i> Add prefix
+    </button>
+  </div>
+  <div class="card-body">
+    <table class="table table-sm mb-0">
+      <thead><tr><th style="width:40%">Prefix</th><th>Match type</th><th>Parameters</th><th style="width:1%"></th></tr></thead>
+      <tbody id="prefix-rows"></tbody>
+    </table>
+    <small class="text-muted">e.g. <code>192.0.2.0/24</code> &mdash; <code>orlonger</code>;
+      <code>through</code>/<code>upto</code>/<code>prefix-length-range</code> take extra length parameters.</small>
+  </div>
+</div>
+
+<script type="text/javascript">
+(function () {
+  const cfg = JSON.parse(document.getElementById("editor-config").textContent);
+
+  function readSeed(hiddenId, scriptId) {
+    const hidden = document.getElementById(hiddenId);
+    if (hidden && hidden.value.trim()) {
+      try {
+        const parsed = JSON.parse(hidden.value);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) { /* fall through */ }
+    }
+    try {
+      return JSON.parse(document.getElementById(scriptId).textContent) || [];
+    } catch (e) { return []; }
+  }
+
+  function typeSelect(current) {
+    const types = cfg.matchTypes;
+    const all = types.includes(current) || !current ? types : [current, ...types];
+    return `<select class="form-select form-select-sm prefix-type">` +
+      all.map(t => `<option value="${t}"${t === current ? " selected" : ""}>${t}</option>`).join("") +
+      `</select>`;
+  }
+
+  function paramsCell(type, params) {
+    params = params || {};
+    const keys = cfg.typeParams[type] || [];
+    if (!keys.length) return `<span class="text-muted">&mdash;</span>`;
+    return keys.map(k =>
+      `<input type="text" class="form-control form-control-sm d-inline-block w-auto me-1 prefix-param" ` +
+      `data-key="${k}" value="${params[k] == null ? "" : params[k]}" placeholder="${k}">`
+    ).join("");
+  }
+
+  function addRow(member) {
+    member = member || { prefix: "", type: cfg.matchTypes[0], params: {} };
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      `<td><input type="text" class="form-control form-control-sm prefix-value" value="${member.prefix || ""}" placeholder="192.0.2.0/24"></td>` +
+      `<td>${typeSelect(member.type)}</td>` +
+      `<td class="prefix-params-cell">${paramsCell(member.type, member.params)}</td>` +
+      `<td><button type="button" class="btn btn-sm btn-danger row-remove"><i class="fa-fw fa-solid fa-trash"></i></button></td>`;
+    tr.querySelector(".prefix-type").addEventListener("change", function () {
+      tr.querySelector(".prefix-params-cell").innerHTML = paramsCell(this.value, {});
+    });
+    tr.querySelector(".row-remove").addEventListener("click", () => tr.remove());
+    document.getElementById("prefix-rows").appendChild(tr);
+  }
+
+  function collect() {
+    const out = [];
+    document.querySelectorAll("#prefix-rows tr").forEach(tr => {
+      const prefix = tr.querySelector(".prefix-value").value.trim();
+      if (!prefix) return;
+      const type = tr.querySelector(".prefix-type").value;
+      const params = {};
+      tr.querySelectorAll(".prefix-param").forEach(inp => {
+        const v = inp.value.trim();
+        if (v) params[inp.dataset.key] = v;
+      });
+      const member = { prefix: prefix, type: type };
+      if (Object.keys(params).length) member.params = params;
+      out.push(member);
+    });
+    return out;
+  }
+
+  const field = document.getElementById("id_prefixes");
+  field.closest("form").addEventListener("submit", function () {
+    field.value = JSON.stringify(collect());
+  });
+
+  readSeed("id_prefixes", "initial-prefixes").forEach(addRow);
+  document.getElementById("add-prefix").addEventListener("click", () => addRow());
+})();
+</script>
+{% endblock form %}

@@ -46,6 +46,28 @@ class PrefixListView(ObjectView):
 class PrefixListEdit(ObjectEditView):
     queryset = PrefixList.objects.all()
     form = PrefixListForm
+    template_name = "bgp/prefixlist/edit.html"
+
+    def get_extra_context(self, request, instance):
+        from ..enums import PrefixListMatchType
+
+        # Param keys each match type takes, kept in sync with the preview renderer.
+        type_params = {
+            PrefixListMatchType.EXACT: [],
+            PrefixListMatchType.LONGER: [],
+            PrefixListMatchType.ORLONGER: [],
+            PrefixListMatchType.UPTO: ["upto-length"],
+            PrefixListMatchType.THROUGH: ["through-length"],
+            PrefixListMatchType.PREFIX_LENGTH_RANGE: ["start-length", "end-length"],
+            PrefixListMatchType.ADDRESS_MASK: ["mask-pattern"],
+        }
+        return {
+            "editor_config": {
+                "matchTypes": [c[0] for c in PrefixListMatchType.CHOICES],
+                "typeParams": type_params,
+            },
+            "initial_prefixes": instance.prefixes if instance and instance.pk else [],
+        }
 
 
 @register_model_view(PrefixList, name="delete")
