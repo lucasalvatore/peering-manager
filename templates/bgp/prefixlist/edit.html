@@ -1,9 +1,19 @@
 {% extends 'generic/edit.html' %}
 {% load helpers %}
+{% load form_helpers %}
 
 {% block form %}
-{# Renders the visible fields plus the hidden prefixes JSON input #}
-{% include 'generic/form.html' %}
+{# Hidden fields (incl. the prefixes JSON the editor writes to) #}
+{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+<div class="card mb-3">
+  <div class="card-header"><strong>Prefix List</strong></div>
+  <div class="card-body">
+    {% render_field form.name %}
+    {% render_field form.description %}
+    {% render_field form.family %}
+  </div>
+</div>
 
 {{ editor_config|json_script:"editor-config" }}
 {{ initial_prefixes|json_script:"initial-prefixes" }}
@@ -24,6 +34,13 @@
       <code>through</code>/<code>upto</code>/<code>prefix-length-range</code> take extra length parameters.</small>
   </div>
 </div>
+
+{% if form.tags %}
+<div class="card mb-3">
+  <div class="card-header"><strong>Tags</strong></div>
+  <div class="card-body">{% render_field form.tags %}</div>
+</div>
+{% endif %}
 
 <script type="text/javascript">
 (function () {

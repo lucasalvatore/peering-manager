@@ -24,9 +24,9 @@ class CommunityTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ]
         )
 
+        # slug is auto-derived from name and no longer a form field
         cls.form_data = {
             "name": "Community 4",
-            "slug": "community-4",
             "value": "64500:4",
             "type": CommunityType.INGRESS,
             "comments": "",

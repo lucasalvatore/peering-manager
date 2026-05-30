@@ -1,9 +1,18 @@
 {% extends 'generic/edit.html' %}
 {% load helpers %}
+{% load form_helpers %}
 
 {% block form %}
-{# Renders the visible fields plus the hidden regexps JSON input #}
-{% include 'generic/form.html' %}
+{# Hidden fields (incl. the regexps JSON the editor writes to) #}
+{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+<div class="card mb-3">
+  <div class="card-header"><strong>AS Path</strong></div>
+  <div class="card-body">
+    {% render_field form.name %}
+    {% render_field form.description %}
+  </div>
+</div>
 
 {{ initial_regexps|json_script:"initial-regexps" }}
 
@@ -22,6 +31,13 @@
     <small class="text-muted">One AS-path regex per row, e.g. <code>^1299 .*</code> or <code>.* 174$</code></small>
   </div>
 </div>
+
+{% if form.tags %}
+<div class="card mb-3">
+  <div class="card-header"><strong>Tags</strong></div>
+  <div class="card-body">{% render_field form.tags %}</div>
+</div>
+{% endif %}
 
 <script type="text/javascript">
 (function () {

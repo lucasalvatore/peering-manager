@@ -7,11 +7,12 @@ from peering_manager.forms import (
 )
 from peering_manager.forms.base import PeeringManagerModelBulkEditForm
 from utils.forms import add_blank_choice
-from utils.forms.fields import JSONField, SlugField, TagFilterField
+from utils.forms.fields import JSONField, TagFilterField
 from utils.forms.widgets import StaticSelect, StaticSelectMultiple
 
 from ..enums import PrefixListFamily
 from ..models import PrefixList
+from .mixins import AutoSlugMixin
 
 __all__ = (
     "PrefixListBulkEditForm",
@@ -20,8 +21,7 @@ __all__ = (
 )
 
 
-class PrefixListForm(PeeringManagerModelForm):
-    slug = SlugField(max_length=255)
+class PrefixListForm(AutoSlugMixin, PeeringManagerModelForm):
     family = forms.ChoiceField(
         required=False,
         choices=PrefixListFamily,
@@ -31,22 +31,16 @@ class PrefixListForm(PeeringManagerModelForm):
     # Built by the structured row editor in templates/bgp/prefixlist/edit.html
     # (prefix + match-type dropdown + per-type params) and submitted as JSON.
     prefixes = JSONField(required=False, widget=forms.HiddenInput())
-    local_context_data = JSONField(required=False)
     tags = TagField(required=False)
-    fieldsets = (
-        ("Prefix List", ("name", "slug", "description", "family")),
-        ("Config Context", ("local_context_data",)),
-    )
+    fieldsets = (("Prefix List", ("name", "description", "family")),)
 
     class Meta:
         model = PrefixList
         fields = (
             "name",
-            "slug",
             "description",
             "family",
             "prefixes",
-            "local_context_data",
             "tags",
         )
 

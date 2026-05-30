@@ -6,33 +6,27 @@ from peering_manager.forms import (
     PeeringManagerModelForm,
 )
 from peering_manager.forms.base import PeeringManagerModelBulkEditForm
-from utils.forms.fields import JSONField, SlugField, TagFilterField
+from utils.forms.fields import JSONField, TagFilterField
 
 from ..models import ASPath
+from .mixins import AutoSlugMixin
 
 __all__ = ("ASPathBulkEditForm", "ASPathFilterForm", "ASPathForm")
 
 
-class ASPathForm(PeeringManagerModelForm):
-    slug = SlugField(max_length=255)
+class ASPathForm(AutoSlugMixin, PeeringManagerModelForm):
     # Built by the row editor in templates/bgp/aspath/edit.html (one regexp per
     # row) and submitted as a JSON list of strings.
     regexps = JSONField(required=False, widget=forms.HiddenInput())
-    local_context_data = JSONField(required=False)
     tags = TagField(required=False)
-    fieldsets = (
-        ("AS Path", ("name", "slug", "description")),
-        ("Config Context", ("local_context_data",)),
-    )
+    fieldsets = (("AS Path", ("name", "description")),)
 
     class Meta:
         model = ASPath
         fields = (
             "name",
-            "slug",
             "description",
             "regexps",
-            "local_context_data",
             "tags",
         )
 
