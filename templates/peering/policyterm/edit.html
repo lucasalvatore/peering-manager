@@ -1,0 +1,169 @@
+{% extends 'generic/edit.html' %}
+{% load helpers %}
+
+{% block form %}
+{# Renders the visible Term fields plus the hidden matches/actions JSON inputs #}
+{% include 'generic/form.html' %}
+
+{{ editor_config|json_script:"editor-config" }}
+{{ initial_matches|json_script:"initial-matches" }}
+{{ initial_actions|json_script:"initial-actions" }}
+
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <strong>Match conditions</strong>
+    <button type="button" class="btn btn-sm btn-primary" id="add-match">
+      <i class="fa-fw fa-solid fa-plus"></i> Add match
+    </button>
+  </div>
+  <div class="card-body">
+    <table class="table table-sm mb-0">
+      <thead><tr><th style="width:30%">Type</th><th>Values</th><th style="width:1%"></th></tr></thead>
+      <tbody id="match-rows"></tbody>
+    </table>
+    <small class="text-muted">For prefix-list / community / as-path, pick from defined
+      objects (Ctrl/Cmd-click for multiple). Other types take comma-separated values.</small>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <strong>Actions</strong>
+    <button type="button" class="btn btn-sm btn-primary" id="add-action">
+      <i class="fa-fw fa-solid fa-plus"></i> Add action
+    </button>
+  </div>
+  <div class="card-body">
+    <table class="table table-sm mb-0">
+      <thead><tr><th style="width:30%">Type</th><th>Value</th><th style="width:1%"></th></tr></thead>
+      <tbody id="action-rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<script type="text/javascript">
+(function () {
+  const cfg = JSON.parse(document.getElementById("editor-config").textContent);
+
+  function readSeed(hiddenId, scriptId) {
+    // Prefer the submitted hidden value (survives validation errors), else the
+    // server-provided initial data.
+    const hidden = document.getElementById(hiddenId);
+    if (hidden && hidden.value.trim()) {
+      try {
+        const parsed = JSON.parse(hidden.value);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) { /* fall through */ }
+    }
+    try {
+      return JSON.parse(document.getElementById(scriptId).textContent) || [];
+    } catch (e) { return []; }
+  }
+
+  function optionList(names, selected) {
+    const sel = new Set(selected || []);
+    // Include any selected value not present in the known list (legacy/custom).
+    const all = Array.from(new Set([...(names || []), ...sel]));
+    return all.map(n =>
+      `<option value="${n}"${sel.has(n) ? " selected" : ""}>${n}</option>`
+    ).join("");
+  }
+
+  function typeSelect(types, current, cls) {
+    const all = types.includes(current) || !current ? types : [current, ...types];
+    return `<select class="form-select form-select-sm ${cls}">` +
+      all.map(t => `<option value="${t}"${t === current ? " selected" : ""}>${t}</option>`).join("") +
+      `</select>`;
+  }
+
+  // ---- Match rows ------------------------------------------------------------
+  function matchValueCell(type, values) {
+    if (cfg.objectMatchTypes.includes(type)) {
+      return `<select multiple class="form-select form-select-sm match-values" data-kind="multi">${optionList(cfg.objects[type], values)}</select>`;
+    }
+    if (type === "protocol") {
+      return `<select multiple class="form-select form-select-sm match-values" data-kind="multi">${optionList(cfg.protocols, values)}</select>`;
+    }
+    return `<input type="text" class="form-control form-control-sm match-values" data-kind="text" value="${(values || []).join(", ")}" placeholder="comma-separated values">`;
+  }
+
+  function addMatchRow(match) {
+    match = match || { match_type: cfg.matchTypes[0], values: [] };
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      `<td>${typeSelect(cfg.matchTypes, match.match_type, "match-type")}</td>` +
+      `<td class="match-value-cell">${matchValueCell(match.match_type, match.values)}</td>` +
+      `<td><button type="button" class="btn btn-sm btn-danger row-remove"><i class="fa-fw fa-solid fa-trash"></i></button></td>`;
+    tr.querySelector(".match-type").addEventListener("change", function () {
+      tr.querySelector(".match-value-cell").innerHTML = matchValueCell(this.value, []);
+    });
+    tr.querySelector(".row-remove").addEventListener("click", () => tr.remove());
+    document.getElementById("match-rows").appendChild(tr);
+  }
+
+  // ---- Action rows -----------------------------------------------------------
+  function actionValueCell(type, value) {
+    if (cfg.communityActionTypes.includes(type)) {
+      return `<select class="form-select form-select-sm action-value" data-kind="single"><option value=""></option>${optionList(cfg.objects["community"], value ? [value] : [])}</select>`;
+    }
+    return `<input type="text" class="form-control form-control-sm action-value" data-kind="text" value="${value == null ? "" : value}" placeholder="value (optional)">`;
+  }
+
+  function addActionRow(action) {
+    action = action || { action_type: cfg.actionTypes[0], value: "" };
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      `<td>${typeSelect(cfg.actionTypes, action.action_type, "action-type")}</td>` +
+      `<td class="action-value-cell">${actionValueCell(action.action_type, action.value)}</td>` +
+      `<td><button type="button" class="btn btn-sm btn-danger row-remove"><i class="fa-fw fa-solid fa-trash"></i></button></td>`;
+    tr.querySelector(".action-type").addEventListener("change", function () {
+      tr.querySelector(".action-value-cell").innerHTML = actionValueCell(this.value, "");
+    });
+    tr.querySelector(".row-remove").addEventListener("click", () => tr.remove());
+    document.getElementById("action-rows").appendChild(tr);
+  }
+
+  // ---- Serialise on submit ---------------------------------------------------
+  function collectMatches() {
+    const out = [];
+    document.querySelectorAll("#match-rows tr").forEach(tr => {
+      const type = tr.querySelector(".match-type").value;
+      const ctl = tr.querySelector(".match-values");
+      let values;
+      if (ctl.dataset.kind === "multi") {
+        values = Array.from(ctl.selectedOptions).map(o => o.value);
+      } else {
+        values = ctl.value.split(",").map(v => v.trim()).filter(Boolean);
+      }
+      if (type) out.push({ match_type: type, values: values });
+    });
+    return out;
+  }
+
+  function collectActions() {
+    const out = [];
+    document.querySelectorAll("#action-rows tr").forEach(tr => {
+      const type = tr.querySelector(".action-type").value;
+      const ctl = tr.querySelector(".action-value");
+      const value = ctl.value.trim();
+      if (type) out.push({ action_type: type, value: value || null });
+    });
+    return out;
+  }
+
+  const matchesField = document.getElementById("id_matches");
+  const actionsField = document.getElementById("id_actions");
+  const form = matchesField.closest("form");
+  form.addEventListener("submit", function () {
+    matchesField.value = JSON.stringify(collectMatches());
+    actionsField.value = JSON.stringify(collectActions());
+  });
+
+  // ---- Seed initial rows -----------------------------------------------------
+  readSeed("id_matches", "initial-matches").forEach(addMatchRow);
+  readSeed("id_actions", "initial-actions").forEach(addActionRow);
+  document.getElementById("add-match").addEventListener("click", () => addMatchRow());
+  document.getElementById("add-action").addEventListener("click", () => addActionRow());
+})();
+</script>
+{% endblock form %}

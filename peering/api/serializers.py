@@ -12,10 +12,7 @@ from devices.api.serializers import NestedRouterSerializer
 from extras.api.serializers import NestedIXAPISerializer
 from net.api.serializers import NestedBFDSerializer, NestedConnectionSerializer
 from peering_manager.api.fields import ChoiceField, SerializedPKRelatedField
-from peering_manager.api.serializers import (
-    PeeringManagerModelSerializer,
-    ValidatedModelSerializer,
-)
+from peering_manager.api.serializers import PeeringManagerModelSerializer
 
 from ..enums import (
     BGPGroupStatus,
@@ -387,39 +384,22 @@ class InternetExchangePeeringSessionSerializer(PeeringManagerModelSerializer):
         ]
 
 
-class TermMatchSerializer(ValidatedModelSerializer):
+# Terms/matches/actions are value-objects owned by a RoutingPolicy and have no
+# standalone detail pages, so they use plain ModelSerializers (no url/display_url
+# hyperlink fields, which would otherwise break webhook serialization).
+class TermMatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = TermMatch
-        fields = [
-            "id",
-            "url",
-            "display_url",
-            "display",
-            "term",
-            "match_type",
-            "values",
-            "created",
-            "updated",
-        ]
+        fields = ["id", "term", "match_type", "values", "created", "updated"]
 
 
-class TermActionSerializer(ValidatedModelSerializer):
+class TermActionSerializer(serializers.ModelSerializer):
     class Meta:
         model = TermAction
-        fields = [
-            "id",
-            "url",
-            "display_url",
-            "display",
-            "term",
-            "action_type",
-            "value",
-            "created",
-            "updated",
-        ]
+        fields = ["id", "term", "action_type", "value", "created", "updated"]
 
 
-class PolicyTermSerializer(ValidatedModelSerializer):
+class PolicyTermSerializer(serializers.ModelSerializer):
     action = ChoiceField(choices=PolicyTermAction, required=False)
     matches = TermMatchSerializer(many=True, read_only=True)
     actions = TermActionSerializer(many=True, read_only=True)
@@ -428,9 +408,6 @@ class PolicyTermSerializer(ValidatedModelSerializer):
         model = PolicyTerm
         fields = [
             "id",
-            "url",
-            "display_url",
-            "display",
             "routing_policy",
             "name",
             "sequence",

@@ -929,23 +929,15 @@ class PolicyTermForm(PeeringManagerModelForm):
 
     routing_policy = DynamicModelChoiceField(queryset=RoutingPolicy.objects.all())
     action = forms.ChoiceField(choices=PolicyTermAction, widget=StaticSelect)
-    matches = JSONField(
-        required=False,
-        help_text='from {...} conditions, e.g. [{"match_type": "community", '
-        '"values": ["CLIST-DAL-TRANSIT"]}]',
-    )
-    actions = JSONField(
-        required=False,
-        help_text='action modifiers, e.g. [{"action_type": "local-preference", '
-        '"value": "200"}]',
-    )
+    # Built by the structured row editor in templates/peering/policyterm/edit.html
+    # (dropdowns + pre-populated object pickers) and submitted as JSON.
+    matches = JSONField(required=False, widget=forms.HiddenInput())
+    actions = JSONField(required=False, widget=forms.HiddenInput())
     fieldsets = (
         (
             "Term",
             ("routing_policy", "name", "sequence", "action", "description"),
         ),
-        ("Match conditions", ("matches",)),
-        ("Actions", ("actions",)),
     )
 
     class Meta:
@@ -957,19 +949,6 @@ class PolicyTermForm(PeeringManagerModelForm):
             "action",
             "description",
         )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Pre-populate the JSON editors from existing child rows.
-        if self.instance and self.instance.pk:
-            self.fields["matches"].initial = [
-                {"match_type": m.match_type, "values": m.values}
-                for m in self.instance.matches.all()
-            ]
-            self.fields["actions"].initial = [
-                {"action_type": a.action_type, "value": a.value}
-                for a in self.instance.actions.all()
-            ]
 
     def clean_matches(self):
         data = self.cleaned_data.get("matches") or []

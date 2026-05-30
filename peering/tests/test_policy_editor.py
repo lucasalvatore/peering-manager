@@ -1,6 +1,9 @@
+import json
 from types import SimpleNamespace as NS
 
-from django.test import SimpleTestCase, TestCase
+from django.contrib.auth import get_user_model
+from django.test import Client, SimpleTestCase, TestCase
+from django.urls import reverse
 
 from bgp.models import ASPath, Community, PrefixList
 
@@ -164,3 +167,61 @@ class PolicyTermFormTestCase(TestCase):
         term.refresh_from_db()
         self.assertEqual(term.matches.count(), 1)
         self.assertEqual(term.matches.first().match_type, "as-path")
+
+
+class PolicyTermViewSaveTestCase(TestCase):
+    """
+    Exercises the full edit-view POST path (incl. the change-logging / webhook
+    serialization that the form-only tests skip), which is where structured
+    matches/actions get persisted from the editor's JSON.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.policy = RoutingPolicy.objects.create(
+            name="RMAP-AS3356-EXPORT",
+            slug="rmap-as3356-export",
+            type=RoutingPolicyType.EXPORT,
+        )
+        cls.user = get_user_model().objects.create_user(
+            username="editor", password="x", is_superuser=True, is_staff=True
+        )
+
+    def test_edit_view_persists_matches_and_actions(self):
+        client = Client()
+        client.force_login(self.user)
+        term = PolicyTerm.objects.create(
+            routing_policy=self.policy, name="ACCEPT", sequence=10
+        )
+        resp = client.post(
+            reverse("peering:policyterm_edit", kwargs={"pk": term.pk}),
+            data={
+                "routing_policy": self.policy.pk,
+                "name": "ACCEPT",
+                "sequence": 10,
+                "action": PolicyTermAction.ACCEPT,
+                "description": "",
+                "matches": json.dumps(
+                    [{"match_type": "protocol", "values": ["bgp"]}]
+                ),
+                "actions": json.dumps(
+                    [{"action_type": "local-preference", "value": "200"}]
+                ),
+            },
+        )
+        # 302 redirect = saved without the webhook-serialization 500.
+        self.assertEqual(resp.status_code, 302)
+        term.refresh_from_db()
+        self.assertEqual(term.matches.first().match_type, "protocol")
+        self.assertEqual(term.actions.first().value, "200")
+
+    def test_editor_page_renders_structured_widgets(self):
+        client = Client()
+        client.force_login(self.user)
+        PrefixList.objects.create(name="PLIST-V4-X", slug="plist-v4-x")
+        resp = client.get(reverse("peering:policyterm_add"))
+        html = resp.content.decode()
+        self.assertContains(resp, 'id="match-rows"')
+        self.assertContains(resp, 'id="editor-config"')
+        # object names are pre-populated into the editor config
+        self.assertIn("PLIST-V4-X", html)
