@@ -30,9 +30,9 @@ class PrefixListFamily(ChoiceSet):
 
 class PrefixListMatchType(ChoiceSet):
     """
-    Per-member prefix match qualifiers, mirroring Junos route-filter match
-    types. Stored on each prefix-list member so the policy preview can render
-    the appropriate qualifier.
+    Per-member prefix match qualifiers, mirroring Nokia SR OS prefix-list
+    match types. Stored on each prefix-list member so the policy preview can
+    render the appropriate qualifier.
     """
 
     EXACT = "exact"

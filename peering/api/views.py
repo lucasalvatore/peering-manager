@@ -610,7 +610,7 @@ class RoutingPolicyViewSet(PeeringManagerModelViewSet):
         responses={
             200: OpenApiResponse(
                 response=OpenApiTypes.OBJECT,
-                description="Junos policy-statement preview of the structured policy",
+                description="Nokia SR OS policy-statement preview of the structured policy",
             )
         },
     )

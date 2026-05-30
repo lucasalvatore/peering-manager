@@ -1,7 +1,8 @@
 """Human-readable preview renderer for structured routing policies.
 
-This reconstructs an on-device ``policy-statement`` syntax (Junos style) from
-the structured `RoutingPolicy` / `PolicyTerm` model purely as a *preview* so
+This reconstructs an on-device ``policy-statement`` syntax (Nokia SR OS /
+MD-CLI style) from the structured `RoutingPolicy` / `PolicyTerm` model purely
+as a *preview* so
 operators can eyeball what they've entered. It is NOT an authoritative config
 generator — Peering Manager renders real device config from its Jinja2
 templates; this just visualises the structured policy.

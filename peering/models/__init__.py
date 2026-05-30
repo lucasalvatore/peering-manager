@@ -1186,7 +1186,7 @@ class RoutingPolicy(OrganisationalModel):
 
 class PolicyTerm(ChangeLoggedModel):
     """
-    A single ordered term within a `RoutingPolicy` (a Junos ``named-entry``):
+    A single ordered term within a `RoutingPolicy` (a Nokia SR OS ``named-entry``):
     an ordered set of `from` match conditions and an action.
     """
 

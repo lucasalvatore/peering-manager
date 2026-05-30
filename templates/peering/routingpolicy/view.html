@@ -38,7 +38,6 @@
     </div>
   </div>
   <div class="col-md-6">
-    {% include 'includes/communities_card.html' %}
     {% include 'includes/tags_card.html' with tags=instance.tags.all url='peering:routingpolicy_list' %}
   </div>
 </div>
@@ -109,7 +108,7 @@
 <div class="row">
   <div class="col-md-12">
     <div class="card mb-3">
-      <div class="card-header"><strong>Preview</strong> <span class="text-muted">(Junos policy-options &mdash; preview only)</span></div>
+      <div class="card-header"><strong>Preview</strong> <span class="text-muted">(Nokia SR OS policy-options &mdash; preview only)</span></div>
       <div class="card-body">
         <pre class="mb-0"><code>{{ preview }}</code></pre>
       </div>
