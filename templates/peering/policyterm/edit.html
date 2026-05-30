@@ -29,7 +29,7 @@
   </div>
   <div class="card-body">
     <table class="table table-sm mb-0">
-      <thead><tr><th style="width:30%">Type</th><th>Values</th><th style="width:1%"></th></tr></thead>
+      <thead><tr><th style="width:18%">Type</th><th>Values</th><th style="width:1%"></th></tr></thead>
       <tbody id="match-rows"></tbody>
     </table>
     <small class="text-muted">For prefix-list / community / as-path, pick from defined
@@ -88,14 +88,22 @@
   }
 
   // ---- Match rows ------------------------------------------------------------
+  function multiSelect(names, values) {
+    // Size the list to its contents (between 6 and 16 visible rows) so many
+    // values aren't crammed into a tiny scrolling box.
+    const total = new Set([...(names || []), ...(values || [])]).size;
+    const size = Math.min(Math.max(total, 6), 16);
+    return `<select multiple size="${size}" class="form-select match-values w-100" data-kind="multi">${optionList(names, values)}</select>`;
+  }
+
   function matchValueCell(type, values) {
     if (cfg.objectMatchTypes.includes(type)) {
-      return `<select multiple class="form-select form-select-sm match-values" data-kind="multi">${optionList(cfg.objects[type], values)}</select>`;
+      return multiSelect(cfg.objects[type], values);
     }
     if (type === "protocol") {
-      return `<select multiple class="form-select form-select-sm match-values" data-kind="multi">${optionList(cfg.protocols, values)}</select>`;
+      return multiSelect(cfg.protocols, values);
     }
-    return `<input type="text" class="form-control form-control-sm match-values" data-kind="text" value="${(values || []).join(", ")}" placeholder="comma-separated values">`;
+    return `<input type="text" class="form-control match-values" data-kind="text" value="${(values || []).join(", ")}" placeholder="comma-separated values">`;
   }
 
   function addMatchRow(match) {
