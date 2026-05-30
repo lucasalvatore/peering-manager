@@ -115,4 +115,42 @@
     </div>
   </div>
 </div>
+
+<div class="row">
+  <div class="col-md-12">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Saved Versions</strong>
+        {% if perms.peering.change_routingpolicy %}
+        <form method="post" action="{% url 'peering:routingpolicy_snapshot' pk=instance.pk %}" class="d-flex gap-2 mb-0">
+          {% csrf_token %}
+          <input type="text" name="comment" class="form-control form-control-sm" placeholder="Optional comment" style="width:240px">
+          <button type="submit" class="btn btn-sm btn-primary text-nowrap"><i class="fa-fw fa-solid fa-floppy-disk"></i> Save version</button>
+        </form>
+        {% endif %}
+      </div>
+      <table class="card-body table table-hover mb-0">
+        <thead><tr><th style="width:22%">When</th><th>Comment</th><th style="width:1%"></th></tr></thead>
+        <tbody>
+          {% for v in versions %}
+          <tr>
+            <td>{{ v.created }}</td>
+            <td>{{ v.comment|default:"&mdash;" }}</td>
+            <td class="text-end">
+              {% if perms.peering.change_routingpolicy %}
+              <form method="post" action="{% url 'peering:routingpolicy_restore' pk=instance.pk version=v.pk %}" class="d-inline" onsubmit="return confirm('Restore this version? The current terms will be replaced.');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-warning text-nowrap"><i class="fa-fw fa-solid fa-clock-rotate-left"></i> Restore</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-muted">No saved versions yet. Use &ldquo;Save version&rdquo; to checkpoint the current policy.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 {% endblock %}

@@ -9,7 +9,14 @@ from bgp.models import ASPath, Community, PrefixList
 
 from ..enums import PolicyTermAction, RoutingPolicyType
 from ..forms import PolicyTermForm
-from ..models import PolicyTerm, RoutingPolicy, TermAction, TermMatch
+from ..models import (
+    PolicyTerm,
+    RoutingPolicy,
+    RoutingPolicyVersion,
+    TermAction,
+    TermMatch,
+)
+from ..policy_history import record, restore, snapshot_policy
 from ..policy_render import (
     render_policy_statement,
     render_preview,
@@ -302,3 +309,78 @@ class PolicyTermMoveTestCase(TestCase):
             )
         )
         self.assertEqual(self._order(), ["A", "B", "C"])
+
+
+class RoutingPolicyHistoryTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.policy = RoutingPolicy.objects.create(
+            name="RMAP-AS2914-EXPORT",
+            slug="rmap-as2914-export",
+            type=RoutingPolicyType.EXPORT,
+            default_action=PolicyTermAction.REJECT,
+        )
+        cls.user = get_user_model().objects.create_user(
+            username="historian", password="x", is_superuser=True, is_staff=True
+        )
+
+    def _add_term(self, name, seq):
+        term = PolicyTerm.objects.create(
+            routing_policy=self.policy, name=name, sequence=seq
+        )
+        TermMatch.objects.create(term=term, match_type="protocol", values=["bgp"])
+        return term
+
+    def test_snapshot_captures_terms(self):
+        self._add_term("T1", 10)
+        snap = snapshot_policy(self.policy)
+        self.assertEqual(snap["default_action"], PolicyTermAction.REJECT)
+        self.assertEqual(len(snap["terms"]), 1)
+        self.assertEqual(snap["terms"][0]["matches"][0]["match_type"], "protocol")
+
+    def test_restore_rebuilds_terms(self):
+        self._add_term("ORIGINAL", 10)
+        version = record(self.policy, comment="checkpoint")
+        # Mutate the policy after the checkpoint.
+        self.policy.terms.all().delete()
+        self._add_term("CHANGED", 10)
+        self.assertEqual([t.name for t in self.policy.terms.all()], ["CHANGED"])
+        # Roll back.
+        restore(self.policy, version)
+        self.assertEqual([t.name for t in self.policy.terms.all()], ["ORIGINAL"])
+        self.assertEqual(self.policy.terms.first().matches.first().match_type, "protocol")
+
+    def test_prune_keeps_last_20(self):
+        from ..policy_history import KEEP
+
+        for i in range(KEEP + 5):
+            record(self.policy, comment=f"v{i}")
+        self.assertEqual(self.policy.versions.count(), KEEP)
+
+    def test_snapshot_view_creates_version(self):
+        self._add_term("T1", 10)
+        client = Client()
+        client.force_login(self.user)
+        resp = client.post(
+            reverse("peering:routingpolicy_snapshot", kwargs={"pk": self.policy.pk}),
+            data={"comment": "manual save"},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(self.policy.versions.count(), 1)
+        self.assertEqual(self.policy.versions.first().comment, "manual save")
+
+    def test_restore_view_rolls_back(self):
+        self._add_term("FIRST", 10)
+        version = record(self.policy)
+        self.policy.terms.all().delete()
+        self._add_term("SECOND", 10)
+        client = Client()
+        client.force_login(self.user)
+        resp = client.post(
+            reverse(
+                "peering:routingpolicy_restore",
+                kwargs={"pk": self.policy.pk, "version": version.pk},
+            )
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual([t.name for t in self.policy.terms.all()], ["FIRST"])

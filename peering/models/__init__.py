@@ -51,6 +51,7 @@ __all__ = (
     "InternetExchangePeeringSession",
     "PolicyTerm",
     "RoutingPolicy",
+    "RoutingPolicyVersion",
     "TermAction",
     "TermMatch",
 )
@@ -1277,3 +1278,27 @@ class TermAction(ChangeLoggedModel):
 
     def get_absolute_url(self) -> str:
         return self.term.get_absolute_url()
+
+
+class RoutingPolicyVersion(models.Model):
+    """
+    A point-in-time snapshot of a `RoutingPolicy`'s structured content
+    (default-action + terms with their matches/actions), so a policy can be
+    rolled back to a previous save. Plain model (no change-logging) — it is the
+    history log itself.
+    """
+
+    routing_policy = models.ForeignKey(
+        to="RoutingPolicy",
+        on_delete=models.CASCADE,
+        related_name="versions",
+    )
+    comment = models.CharField(max_length=512, blank=True)
+    snapshot = models.JSONField(default=dict)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created", "-id"]
+
+    def __str__(self) -> str:
+        return f"{self.routing_policy} @ {self.created:%Y-%m-%d %H:%M}"

@@ -1,3 +1,8 @@
+from django.contrib import messages
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.shortcuts import get_object_or_404, redirect
+from django.views.generic import View
+
 from extras.views import ObjectConfigContextView
 from peering_manager.views.generic import (
     BulkDeleteView,
@@ -15,7 +20,8 @@ from ..forms import (
     RoutingPolicyFilterForm,
     RoutingPolicyForm,
 )
-from ..models import RoutingPolicy
+from ..models import RoutingPolicy, RoutingPolicyVersion
+from ..policy_history import record, restore
 from ..tables import RoutingPolicyTable
 
 __all__ = (
@@ -25,6 +31,8 @@ __all__ = (
     "RoutingPolicyDelete",
     "RoutingPolicyEdit",
     "RoutingPolicyList",
+    "RoutingPolicySnapshot",
+    "RoutingPolicyVersionRestore",
     "RoutingPolicyView",
 )
 
@@ -50,6 +58,7 @@ class RoutingPolicyView(ObjectView):
         return {
             "terms": instance.terms.all(),
             "preview": render_preview(instance),
+            "versions": instance.versions.all(),
         }
 
 
@@ -87,3 +96,36 @@ class RoutingPolicyConfigContext(ObjectConfigContextView):
     permission_required = "peering.view_routingpolicy"
     queryset = RoutingPolicy.objects.all()
     base_template = "peering/routingpolicy/_base.html"
+
+
+@register_model_view(RoutingPolicy, name="snapshot", path="snapshot")
+class RoutingPolicySnapshot(PermissionRequiredMixin, View):
+    """Save the policy's current structured content as a version."""
+
+    permission_required = "peering.change_routingpolicy"
+
+    def post(self, request, pk):
+        policy = get_object_or_404(RoutingPolicy, pk=pk)
+        version = record(policy, comment=request.POST.get("comment", "").strip())
+        messages.success(request, f"Saved version from {version.created:%Y-%m-%d %H:%M}.")
+        return redirect(policy.get_absolute_url())
+
+
+@register_model_view(
+    RoutingPolicy, name="restore", path="versions/<int:version>/restore"
+)
+class RoutingPolicyVersionRestore(PermissionRequiredMixin, View):
+    """Roll the policy back to a saved version."""
+
+    permission_required = "peering.change_routingpolicy"
+
+    def post(self, request, pk, version):
+        policy = get_object_or_404(RoutingPolicy, pk=pk)
+        target = get_object_or_404(
+            RoutingPolicyVersion, pk=version, routing_policy=policy
+        )
+        restore(policy, target)
+        messages.success(
+            request, f"Restored to version from {target.created:%Y-%m-%d %H:%M}."
+        )
+        return redirect(policy.get_absolute_url())
