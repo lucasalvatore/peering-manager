@@ -93,6 +93,10 @@ NAVIGATION: list[MenuItem | MenuGroup] = [
             MenuItem(label="Prefix Lists", url_name="bgp:prefixlist_list"),
             MenuItem(label="AS Paths", url_name="bgp:aspath_list"),
             MenuItem(label="Routing Policies", url_name="peering:routingpolicy_list"),
+            MenuItem(
+                label="Policies by Device",
+                url_name="peering:routingpolicy_bydevice",
+            ),
         ],
     ),
     MenuGroup(

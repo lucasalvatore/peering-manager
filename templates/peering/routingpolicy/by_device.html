@@ -1,0 +1,84 @@
+{% extends '_base.html' %}
+{% load helpers %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">{% block title %}Policies by Device{% endblock %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><strong>Device</strong></div>
+      <div class="card-body">
+        <form method="get" class="d-flex gap-2">
+          <select name="router" class="form-select" onchange="this.form.submit()">
+            <option value="">— Select a device —</option>
+            {% for r in routers %}
+            <option value="{{ r.pk }}"{% if router and r.pk == router.pk %} selected{% endif %}>{{ r.name }}</option>
+            {% endfor %}
+          </select>
+          <noscript><button type="submit" class="btn btn-primary">Go</button></noscript>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if router %}
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Import Policies</strong>
+        {% if perms.peering.add_routingpolicy %}
+        <a href="{% url 'peering:routingpolicy_add' %}?router={{ router.pk }}&type=import-policy" class="btn btn-sm btn-primary">
+          <i class="fa-fw fa-solid fa-plus"></i> Add
+        </a>
+        {% endif %}
+      </div>
+      <table class="card-body table table-hover mb-0">
+        <tbody>
+          {% for policy in import_policies %}
+          <tr>
+            <td><a href="{{ policy.get_absolute_url }}">{{ policy.name }}</a></td>
+            <td>{{ policy.get_type_html }}</td>
+            <td class="text-end text-muted">{{ policy.terms.count }} term{{ policy.terms.count|pluralize }}</td>
+          </tr>
+          {% empty %}
+          <tr><td class="text-muted">No import policies on this device.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Export Policies</strong>
+        {% if perms.peering.add_routingpolicy %}
+        <a href="{% url 'peering:routingpolicy_add' %}?router={{ router.pk }}&type=export-policy" class="btn btn-sm btn-primary">
+          <i class="fa-fw fa-solid fa-plus"></i> Add
+        </a>
+        {% endif %}
+      </div>
+      <table class="card-body table table-hover mb-0">
+        <tbody>
+          {% for policy in export_policies %}
+          <tr>
+            <td><a href="{{ policy.get_absolute_url }}">{{ policy.name }}</a></td>
+            <td>{{ policy.get_type_html }}</td>
+            <td class="text-end text-muted">{{ policy.terms.count }} term{{ policy.terms.count|pluralize }}</td>
+          </tr>
+          {% empty %}
+          <tr><td class="text-muted">No export policies on this device.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<p class="text-muted">Select a device above to see the routing policies assigned to it.</p>
+{% endif %}
+{% endblock %}

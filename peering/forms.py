@@ -880,11 +880,17 @@ class RoutingPolicyForm(PeeringManagerModelForm):
         widget=StaticSelect,
         help_text="Action applied to routes not matched by any term",
     )
+    router = DynamicModelChoiceField(
+        required=False,
+        queryset=Router.objects.all(),
+        help_text="Device that owns this policy",
+    )
     tags = TagField(required=False)
     fieldsets = (
         (
             "Routing Policy",
             (
+                "router",
                 "name",
                 "slug",
                 "description",
@@ -900,6 +906,7 @@ class RoutingPolicyForm(PeeringManagerModelForm):
         model = RoutingPolicy
 
         fields = (
+            "router",
             "name",
             "slug",
             "description",

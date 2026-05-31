@@ -7,6 +7,10 @@
       <div class="card-header"><strong>Details</strong></div>
       <table class="card-body table table-hover attr-table mb-0">
         <tr>
+          <td>Device</td>
+          <td>{% if instance.router %}<a href="{{ instance.router.get_absolute_url }}">{{ instance.router }}</a>{% else %}<span class="text-muted">&mdash;</span>{% endif %}</td>
+        </tr>
+        <tr>
           <td>Name</td>
           <td>{{ instance.name }}</td>
         </tr>

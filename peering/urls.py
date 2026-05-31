@@ -71,6 +71,11 @@ urlpatterns = [
         ),
     ),
     path(
+        "routing-policies/by-device/",
+        views.RoutingPolicyByDeviceView.as_view(),
+        name="routingpolicy_bydevice",
+    ),
+    path(
         "routing-policies/",
         include(
             get_model_urls(

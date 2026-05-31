@@ -311,6 +311,55 @@ class PolicyTermMoveTestCase(TestCase):
         self.assertEqual(self._order(), ["A", "B", "C"])
 
 
+class RoutingPolicyByDeviceTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        from devices.models import Router
+
+        cls.router = Router.objects.create(name="br1-test", hostname="br1.test")
+        cls.other = Router.objects.create(name="br2-test", hostname="br2.test")
+        cls.imp = RoutingPolicy.objects.create(
+            name="RMAP-IMPORT", slug="rmap-import",
+            type=RoutingPolicyType.IMPORT, router=cls.router,
+        )
+        cls.exp = RoutingPolicy.objects.create(
+            name="RMAP-EXPORT", slug="rmap-export",
+            type=RoutingPolicyType.EXPORT, router=cls.router,
+        )
+        cls.both = RoutingPolicy.objects.create(
+            name="RMAP-BOTH", slug="rmap-both",
+            type=RoutingPolicyType.IMPORT_EXPORT, router=cls.router,
+        )
+        cls.elsewhere = RoutingPolicy.objects.create(
+            name="RMAP-OTHER", slug="rmap-other",
+            type=RoutingPolicyType.IMPORT, router=cls.other,
+        )
+        cls.user = get_user_model().objects.create_user(
+            username="picker", password="x", is_superuser=True, is_staff=True
+        )
+
+    def test_picker_groups_policies_by_device(self):
+        client = Client()
+        client.force_login(self.user)
+        resp = client.get(
+            reverse("peering:routingpolicy_bydevice"), {"router": self.router.pk}
+        )
+        self.assertEqual(resp.status_code, 200)
+        imports = set(resp.context["import_policies"].values_list("name", flat=True))
+        exports = set(resp.context["export_policies"].values_list("name", flat=True))
+        self.assertEqual(imports, {"RMAP-IMPORT", "RMAP-BOTH"})
+        self.assertEqual(exports, {"RMAP-EXPORT", "RMAP-BOTH"})
+        # a policy owned by another device is not shown
+        self.assertNotIn("RMAP-OTHER", imports | exports)
+
+    def test_picker_without_selection(self):
+        client = Client()
+        client.force_login(self.user)
+        resp = client.get(reverse("peering:routingpolicy_bydevice"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(resp.context["router"])
+
+
 class RoutingPolicyHistoryTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):

@@ -1156,6 +1156,14 @@ class RoutingPolicy(OrganisationalModel):
         default=PolicyTermAction.REJECT,
         help_text="Action applied to routes not matched by any term",
     )
+    router = models.ForeignKey(
+        to="devices.Router",
+        on_delete=models.SET_NULL,
+        related_name="routing_policies",
+        null=True,
+        blank=True,
+        help_text="Device that owns this policy",
+    )
     communities = models.ManyToManyField("bgp.Community", blank=True)
 
     class Meta:
