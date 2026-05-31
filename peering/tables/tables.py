@@ -329,6 +329,7 @@ class AutonomousSystemPrefixTable(BaseTable):
 
 class RoutingPolicyTable(PeeringManagerTable):
     name = tables.Column(linkify=True)
+    router = tables.Column(linkify=True, verbose_name="Device")
     type = tables.TemplateColumn(template_code=ROUTING_POLICY_TYPE)
     communities = CommunityColumn()
     tags = columns.TagColumn(url_name="peering:routingpolicy_list")
@@ -339,6 +340,7 @@ class RoutingPolicyTable(PeeringManagerTable):
             "pk",
             "id",
             "name",
+            "router",
             "type",
             "weight",
             "address_family",
@@ -346,7 +348,15 @@ class RoutingPolicyTable(PeeringManagerTable):
             "tags",
             "actions",
         )
-        default_columns = ("pk", "name", "type", "weight", "address_family", "actions")
+        default_columns = (
+            "pk",
+            "name",
+            "router",
+            "type",
+            "weight",
+            "address_family",
+            "actions",
+        )
 
 
 POLICY_TERM_ACTION = """<span class="badge text-bg-{{ record.get_action_colour }}">{{ record.get_action_display }}</span>"""

@@ -422,7 +422,7 @@ class PolicyTermSerializer(serializers.ModelSerializer):
 
 class RoutingPolicySerializer(PeeringManagerModelSerializer):
     default_action = ChoiceField(choices=PolicyTermAction, required=False)
-    router = NestedRouterSerializer(required=False, allow_null=True)
+    router = NestedRouterSerializer(required=False, allow_null=True, default=None)
     communities = SerializedPKRelatedField(
         queryset=Community.objects.all(),
         serializer=NestedCommunitySerializer,

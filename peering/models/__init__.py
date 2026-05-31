@@ -1139,6 +1139,11 @@ class InternetExchangePeeringSession(BGPSession):
 
 
 class RoutingPolicy(OrganisationalModel):
+    # Override the globally-unique name/slug from OrganisationalModel so a policy
+    # name may be reused as long as it is on a different device (see Meta
+    # constraints). NULL router (unowned) policies are not constrained.
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=100)
     type = models.CharField(
         max_length=50,
         choices=RoutingPolicyType,
@@ -1169,6 +1174,16 @@ class RoutingPolicy(OrganisationalModel):
     class Meta:
         verbose_name_plural = "routing policies"
         ordering = ["-weight", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["router", "name"],
+                name="peering_routingpolicy_unique_name_per_router",
+            ),
+            models.UniqueConstraint(
+                fields=["router", "slug"],
+                name="peering_routingpolicy_unique_slug_per_router",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name

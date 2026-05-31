@@ -360,6 +360,42 @@ class RoutingPolicyByDeviceTestCase(TestCase):
         self.assertIsNone(resp.context["router"])
 
 
+class RoutingPolicyNamingTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        from devices.models import Router
+
+        cls.r1 = Router.objects.create(name="rtr-a", hostname="a")
+        cls.r2 = Router.objects.create(name="rtr-b", hostname="b")
+
+    def test_same_name_different_device_allowed(self):
+        RoutingPolicy.objects.create(
+            name="RMAP-DUP", slug="rmap-dup", type=RoutingPolicyType.IMPORT,
+            router=self.r1,
+        )
+        dup = RoutingPolicy(
+            name="RMAP-DUP", slug="rmap-dup", type=RoutingPolicyType.IMPORT,
+            router=self.r2,
+        )
+        dup.full_clean()  # must not raise
+        dup.save()
+        self.assertEqual(RoutingPolicy.objects.filter(name="RMAP-DUP").count(), 2)
+
+    def test_duplicate_name_same_device_rejected(self):
+        from django.core.exceptions import ValidationError
+
+        RoutingPolicy.objects.create(
+            name="RMAP-X", slug="rmap-x", type=RoutingPolicyType.IMPORT,
+            router=self.r1,
+        )
+        dup = RoutingPolicy(
+            name="RMAP-X", slug="rmap-x", type=RoutingPolicyType.IMPORT,
+            router=self.r1,
+        )
+        with self.assertRaises(ValidationError):
+            dup.full_clean()
+
+
 class RoutingPolicyHistoryTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
