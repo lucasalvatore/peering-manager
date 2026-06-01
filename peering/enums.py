@@ -80,12 +80,12 @@ class PolicyTermAction(ChoiceSet):
 
     ACCEPT = "accept"
     REJECT = "reject"
-    NEXT_TERM = "next-term"
+    NEXT_ENTRY = "next-entry"
     NEXT_POLICY = "next-policy"
 
     CHOICES = (
         (ACCEPT, "Accept", "success"),
         (REJECT, "Reject", "danger"),
-        (NEXT_TERM, "Next term", "secondary"),
+        (NEXT_ENTRY, "Next entry", "secondary"),
         (NEXT_POLICY, "Next policy", "secondary"),
     )

@@ -194,8 +194,8 @@ def render_policy_statement(routing_policy) -> str:
     )
 
 
-def render_objects_preview(routing_policy) -> list[str]:
-    """Render every reusable object referenced by the policy (DB lookup).
+def _render_object_keys(keys) -> list[str]:
+    """Render the given (obj_type, name) objects (DB lookup, deduped, sorted).
 
     Imported lazily so the pure rendering helpers above stay import-safe
     without Django configured.
@@ -213,16 +213,36 @@ def render_objects_preview(routing_policy) -> list[str]:
         "community": render_community,
     }
     parts = []
-    for obj_type, name in sorted(referenced_object_keys(routing_policy)):
+    for obj_type, name in sorted(keys):
         obj = fetch[obj_type](name)
         if obj is not None:
             parts.append(render[obj_type](obj))
     return parts
 
 
+def render_objects_preview(routing_policy) -> list[str]:
+    """Render every reusable object referenced by a single policy."""
+    return _render_object_keys(referenced_object_keys(routing_policy))
+
+
 def render_preview(routing_policy) -> str:
     """Full preview: referenced objects + the policy, under ``policy-options``."""
     parts = render_objects_preview(routing_policy)
     parts.append(render_policy_statement(routing_policy))
+    inner = "\n".join(parts)
+    return "policy-options {\n" + _indent(inner, 1) + "\n}"
+
+
+def render_policies(routing_policies) -> str:
+    """Render many policies (e.g. all owned by a device) under one
+    ``policy-options`` block, with referenced objects deduped across them."""
+    policies = list(routing_policies)
+    if not policies:
+        return "policy-options {\n}"
+    keys = set()
+    for policy in policies:
+        keys |= referenced_object_keys(policy)
+    parts = _render_object_keys(keys)
+    parts.extend(render_policy_statement(p) for p in policies)
     inner = "\n".join(parts)
     return "policy-options {\n" + _indent(inner, 1) + "\n}"

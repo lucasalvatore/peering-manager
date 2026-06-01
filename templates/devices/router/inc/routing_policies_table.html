@@ -1,0 +1,8 @@
+{% extends 'generic/object_list.html' %}
+{% block extra_buttons %}
+{% if perms.peering.add_routingpolicy %}
+<a href="{% url 'peering:routingpolicy_add' %}?router={{ instance.pk }}" class="btn btn-sm btn-primary">
+  <i class="fa-fw fa-solid fa-plus"></i> Add
+</a>
+{% endif %}
+{% endblock %}

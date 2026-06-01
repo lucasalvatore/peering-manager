@@ -1,0 +1,18 @@
+{% extends 'devices/router/_base.html' %}
+{% block subcontent %}
+<div class="row">
+  <div class="col">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><strong>Policy Preview</strong> <span class="text-muted">(Nokia SR OS policy-options &mdash; preview only, not validated)</span></span>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="navigator.clipboard.writeText(document.getElementById('policy-preview').textContent)">
+          <i class="fa-fw fa-solid fa-copy"></i> Copy
+        </button>
+      </div>
+      <div class="card-body">
+        <pre class="mb-0"><code id="policy-preview">{{ preview }}</code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

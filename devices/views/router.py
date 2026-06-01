@@ -5,10 +5,10 @@ from django.views import View
 
 from extras.views import ObjectConfigContextView
 from net.models import Connection
-from peering.filtersets import DirectPeeringSessionFilterSet
-from peering.forms import DirectPeeringSessionFilterForm
-from peering.models import DirectPeeringSession
-from peering.tables import DirectPeeringSessionTable
+from peering.filtersets import DirectPeeringSessionFilterSet, RoutingPolicyFilterSet
+from peering.forms import DirectPeeringSessionFilterForm, RoutingPolicyFilterForm
+from peering.models import DirectPeeringSession, RoutingPolicy
+from peering.tables import DirectPeeringSessionTable, RoutingPolicyTable
 from peering_manager.views.generic import (
     BulkDeleteView,
     BulkEditView,
@@ -35,6 +35,8 @@ __all__ = (
     "RouterDirectPeeringSessions",
     "RouterEdit",
     "RouterList",
+    "RouterPolicyPreview",
+    "RouterRoutingPolicies",
     "RouterView",
 )
 
@@ -162,3 +164,45 @@ class RouterDirectPeeringSessions(ObjectChildrenView):
 
     def get_children(self, request, parent):
         return parent.directpeeringsession_set.order_by("relationship", "ip_address")
+
+
+@register_model_view(model=Router, name="routing_policies", path="routing-policies")
+class RouterRoutingPolicies(ObjectChildrenView):
+    permission_required = ("devices.view_router", "peering.view_routingpolicy")
+    queryset = Router.objects.all()
+    child_model = RoutingPolicy
+    filterset = RoutingPolicyFilterSet
+    filterset_form = RoutingPolicyFilterForm
+    table = RoutingPolicyTable
+    template_name = "devices/router/routing_policies.html"
+    tab = ViewTab(
+        label="Routing Policies",
+        badge=lambda instance: instance.routing_policies.count(),
+        permission="peering.view_routingpolicy",
+        weight=3500,
+    )
+
+    def get_children(self, request, parent):
+        return parent.routing_policies.order_by("type", "name")
+
+
+@register_model_view(model=Router, name="policy_preview", path="policy-preview")
+class RouterPolicyPreview(ObjectView):
+    permission_required = ("devices.view_router", "peering.view_routingpolicy")
+    queryset = Router.objects.all()
+    template_name = "devices/router/policy_preview.html"
+    tab = ViewTab(
+        label="Policy Preview",
+        permission="peering.view_routingpolicy",
+        weight=3600,
+        badge=lambda instance: instance.routing_policies.count(),
+    )
+
+    def get_extra_context(self, request, instance):
+        from peering.policy_render import render_policies
+
+        return {
+            "preview": render_policies(
+                instance.routing_policies.order_by("type", "name")
+            )
+        }
