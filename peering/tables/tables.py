@@ -339,7 +339,11 @@ class RoutingPolicyTable(PeeringManagerTable):
         verbose_name="State",
         orderable=False,
     )
-    nos = tables.Column(verbose_name="NOS")
+    platform = tables.TemplateColumn(
+        template_code="{{ record.get_platform_html }}",
+        verbose_name="Platform",
+        orderable=False,
+    )
     communities = CommunityColumn()
     tags = columns.TagColumn(url_name="peering:routingpolicy_list")
 
@@ -350,11 +354,11 @@ class RoutingPolicyTable(PeeringManagerTable):
             "id",
             "name",
             "router",
+            "platform",
             "type",
             "weight",
             "address_family",
             "state",
-            "nos",
             "is_template",
             "communities",
             "tags",
@@ -364,6 +368,7 @@ class RoutingPolicyTable(PeeringManagerTable):
             "pk",
             "name",
             "router",
+            "platform",
             "type",
             "state",
             "actions",

@@ -1235,6 +1235,20 @@ class RoutingPolicy(OrganisationalModel):
 
         return is_modified(self)
 
+    def get_platform_html(self):
+        """The platform a policy renders for: the owning device's platform, or
+        (for templates) the declared NOS."""
+        if self.router_id and self.router and self.router.platform_id:
+            platform = self.router.platform
+            return mark_safe(
+                f'<a href="{platform.get_absolute_url()}">{platform.name}</a>'
+            )
+        if self.is_template:
+            return mark_safe(
+                f'<span class="badge text-bg-secondary">{self.get_nos_display()}</span>'
+            )
+        return mark_safe('<span class="text-muted">&mdash;</span>')
+
     def get_modified_html(self):
         modified = self.is_modified
         if modified is None:
