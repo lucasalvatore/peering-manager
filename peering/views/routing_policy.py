@@ -120,6 +120,7 @@ class RoutingPolicyView(ObjectView):
             "terms": instance.terms.all(),
             "preview": render_preview(instance),
             "preview_nos": nos_label(policy_nos(instance)),
+            "undefined_refs": instance.undefined_references(),
             "versions": instance.versions.all(),
             # Restore is offered only when there's a template baseline.
             "can_restore_default": (

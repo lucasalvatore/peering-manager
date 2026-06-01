@@ -19,6 +19,7 @@
 {{ editor_config|json_script:"editor-config" }}
 {{ initial_matches|json_script:"initial-matches" }}
 {{ initial_actions|json_script:"initial-actions" }}
+<span id="editor-datalists"></span>
 
 <div class="card mb-3">
   <div class="card-header d-flex justify-content-between align-items-center">
@@ -98,7 +99,8 @@
 
   function matchValueCell(type, values) {
     if (cfg.objectMatchTypes.includes(type)) {
-      return multiSelect(cfg.objects[type], values);
+      // Free text + suggestions, so new/placeholder object names can be typed.
+      return `<input type="text" class="form-control match-values" data-kind="text" list="dl-${type}" value="${(values || []).join(", ")}" placeholder="comma-separated object names">`;
     }
     if (type === "protocol") {
       return multiSelect(cfg.protocols, values);
@@ -123,7 +125,8 @@
   // ---- Action rows -----------------------------------------------------------
   function actionValueCell(type, value) {
     if (cfg.communityActionTypes.includes(type)) {
-      return `<select class="form-select form-select-sm action-value" data-kind="single"><option value=""></option>${optionList(cfg.objects["community"], value ? [value] : [])}</select>`;
+      // Free text + community suggestions (supports {site} placeholders / new names).
+      return `<input type="text" class="form-control form-control-sm action-value" data-kind="text" list="dl-community" value="${value == null ? "" : value}" placeholder="community name">`;
     }
     return `<input type="text" class="form-control form-control-sm action-value" data-kind="text" value="${value == null ? "" : value}" placeholder="value (optional)">`;
   }
@@ -177,6 +180,18 @@
     matchesField.value = JSON.stringify(collectMatches());
     actionsField.value = JSON.stringify(collectActions());
   });
+
+  // ---- Datalists (object-name suggestions) -----------------------------------
+  (function buildDatalists() {
+    const container = document.getElementById("editor-datalists");
+    ["prefix-list", "community", "as-path"].forEach(t => {
+      const dl = document.createElement("datalist");
+      dl.id = "dl-" + t;
+      dl.innerHTML = (cfg.objects[t] || [])
+        .map(n => `<option value="${n}"></option>`).join("");
+      container.appendChild(dl);
+    });
+  })();
 
   // ---- Seed initial rows -----------------------------------------------------
   readSeed("id_matches", "initial-matches").forEach(addMatchRow);

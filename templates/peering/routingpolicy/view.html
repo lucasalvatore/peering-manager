@@ -1,6 +1,14 @@
 {% extends 'peering/routingpolicy/_base.html' %}
 {% load helpers %}
 {% block subcontent %}
+{% if undefined_refs %}
+<div class="alert alert-warning" role="alert">
+  <i class="fa-fw fa-solid fa-triangle-exclamation"></i>
+  <strong>Undefined object references:</strong>
+  {% for t, n in undefined_refs %}<span class="badge text-bg-warning">{{ t }} {{ n }}</span> {% endfor %}
+  <div class="small text-muted mt-1">These names are referenced but not defined as objects yet.</div>
+</div>
+{% endif %}
 <div class="row">
   <div class="col-md-6">
     <div class="card mb-3">

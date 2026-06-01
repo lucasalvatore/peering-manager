@@ -1235,6 +1235,26 @@ class RoutingPolicy(OrganisationalModel):
 
         return is_modified(self)
 
+    def undefined_references(self):
+        """(type, name) object references in this policy that don't exist as
+        objects, ignoring {site} template placeholders."""
+        from bgp.models import ASPath, Community, PrefixList
+
+        from ..policy_render import referenced_object_keys
+
+        exists = {
+            "prefix-list": lambda n: PrefixList.objects.filter(name=n).exists(),
+            "community": lambda n: Community.objects.filter(name=n).exists(),
+            "as-path": lambda n: ASPath.objects.filter(name=n).exists(),
+        }
+        missing = []
+        for obj_type, name in sorted(referenced_object_keys(self)):
+            if "{" in name:  # template placeholder, not a concrete reference
+                continue
+            if not exists[obj_type](name):
+                missing.append((obj_type, name))
+        return missing
+
     def get_platform_html(self):
         """The platform a policy renders for: the owning device's platform, or
         (for templates) the declared NOS."""

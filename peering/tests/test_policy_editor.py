@@ -451,6 +451,22 @@ class RoutingPolicyModifiedTestCase(TestCase):
         )
         self.assertIsNone(p.is_modified)
 
+    def test_undefined_references_flagged(self):
+        self._add_default_export_term()  # refs PLIST-V4/V6 that don't exist
+        refs = self.policy.undefined_references()
+        self.assertIn(("prefix-list", "PLIST-V4-PUBLIC-AGGREGATES"), refs)
+
+    def test_site_placeholder_not_flagged(self):
+        # A {site} placeholder reference is not reported as undefined.
+        term = PolicyTerm.objects.create(
+            routing_policy=self.policy, name="X", sequence=5,
+            action=PolicyTermAction.NEXT_ENTRY,
+        )
+        term.actions.create(action_type="community-add", value="CLIST-{site}-TRANSIT")
+        self.assertNotIn(
+            ("community", "CLIST-{site}-TRANSIT"), self.policy.undefined_references()
+        )
+
     def test_apply_template_on_create(self):
         from peering.forms import RoutingPolicyForm
 
