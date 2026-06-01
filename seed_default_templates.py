@@ -21,7 +21,11 @@ django.setup()
 
 from django.utils.text import slugify  # noqa: E402
 
-from peering.enums import PolicyTermAction, RoutingPolicyType  # noqa: E402
+from peering.enums import (  # noqa: E402
+    NetworkOS,
+    PolicyTermAction,
+    RoutingPolicyType,
+)
 from peering.models import RoutingPolicy  # noqa: E402
 
 TEMPLATES = {
@@ -57,22 +61,25 @@ TEMPLATES = {
     ),
 }
 
+# One template per (type, NOS); terms are identical (NOS only affects rendering).
 for ptype, (name, terms) in TEMPLATES.items():
-    policy, _ = RoutingPolicy.objects.update_or_create(
-        name=name, router=None,
-        defaults=dict(
-            slug=slugify(name), type=ptype, is_template=True,
-            default_action=PolicyTermAction.REJECT,
-            description="Editable default template",
-        ),
-    )
-    policy.terms.all().delete()
-    for spec in terms:
-        term = policy.terms.create(
-            name=spec["name"], sequence=spec["sequence"], action=spec["action"]
+    for nos in (NetworkOS.NOKIA, NetworkOS.JUNOS):
+        slug = slugify(name) + ("" if nos == NetworkOS.NOKIA else f"-{nos}")
+        policy, _ = RoutingPolicy.objects.update_or_create(
+            name=name, router=None, nos=nos,
+            defaults=dict(
+                slug=slug, type=ptype, is_template=True,
+                default_action=PolicyTermAction.REJECT,
+                description=f"Editable default template ({nos})",
+            ),
         )
-        for match_type, values in spec["matches"]:
-            term.matches.create(match_type=match_type, values=values)
-        for action_type, value in spec["actions"]:
-            term.actions.create(action_type=action_type, value=value)
-    print(f"seeded template {name} ({policy.terms.count()} terms)")
+        policy.terms.all().delete()
+        for spec in terms:
+            term = policy.terms.create(
+                name=spec["name"], sequence=spec["sequence"], action=spec["action"]
+            )
+            for match_type, values in spec["matches"]:
+                term.matches.create(match_type=match_type, values=values)
+            for action_type, value in spec["actions"]:
+                term.actions.create(action_type=action_type, value=value)
+        print(f"seeded template {name} [{nos}] ({policy.terms.count()} terms)")
