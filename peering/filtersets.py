@@ -375,6 +375,9 @@ class RoutingPolicyFilterSet(OrganisationalModelFilterSet):
     type = django_filters.MultipleChoiceFilter(
         method="type_search", choices=RoutingPolicyType, null_value=None
     )
+    router = django_filters.ModelMultipleChoiceFilter(
+        queryset=Router.objects.all(), label="Device"
+    )
 
     class Meta:
         model = RoutingPolicy

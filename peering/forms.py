@@ -1016,6 +1016,9 @@ class RoutingPolicyBulkEditForm(PeeringManagerModelBulkEditForm):
 
 class RoutingPolicyFilterForm(PeeringManagerModelFilterSetForm):
     model = RoutingPolicy
+    router = DynamicModelMultipleChoiceField(
+        required=False, queryset=Router.objects.all(), label="Device"
+    )
     type = forms.MultipleChoiceField(
         required=False,
         choices=add_blank_choice(RoutingPolicyType),
