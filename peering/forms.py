@@ -37,6 +37,7 @@ from .enums import (
     BGPSessionStatus,
     BGPState,
     IPFamily,
+    NetworkOS,
     PolicyTermAction,
     RoutingPolicyType,
 )
@@ -885,6 +886,10 @@ class RoutingPolicyForm(PeeringManagerModelForm):
         queryset=Router.objects.all(),
         help_text="Device that owns this policy",
     )
+    nos = forms.ChoiceField(
+        choices=NetworkOS, widget=StaticSelect, label="NOS",
+        help_text="Network OS this template targets (templates only)",
+    )
     tags = TagField(required=False)
     fieldsets = (
         (
@@ -899,6 +904,7 @@ class RoutingPolicyForm(PeeringManagerModelForm):
                 "address_family",
                 "default_action",
                 "is_template",
+                "nos",
             ),
         ),
     )
@@ -916,6 +922,7 @@ class RoutingPolicyForm(PeeringManagerModelForm):
             "address_family",
             "default_action",
             "is_template",
+            "nos",
             "tags",
         )
 

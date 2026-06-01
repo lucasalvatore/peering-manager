@@ -268,6 +268,7 @@ class RoutingPolicyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "address_family": 6,
             "weight": 1,
             "default_action": PolicyTermAction.REJECT,
+            "nos": "nokia",
             "comments": "",
             "tags": [],
         }

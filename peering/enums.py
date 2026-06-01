@@ -75,6 +75,18 @@ class RoutingPolicyType(ChoiceSet):
     CHOICES = ((EXPORT, "Export"), (IMPORT, "Import"), (IMPORT_EXPORT, "Import+Export"))
 
 
+class NetworkOS(ChoiceSet):
+    """Network operating system a routing-policy preview is rendered for."""
+
+    NOKIA = "nokia"
+    JUNOS = "junos"
+
+    CHOICES = (
+        (NOKIA, "Nokia SR OS"),
+        (JUNOS, "Juniper Junos"),
+    )
+
+
 class PolicyTermAction(ChoiceSet):
     """Action taken by a routing-policy term (or the policy default-action)."""
 

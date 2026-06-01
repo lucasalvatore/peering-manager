@@ -117,7 +117,8 @@ class RoutingPolicyTest(TestCase):
                 "weight": 0,
                 "address_family": 0,
                 "default_action": PolicyTermAction.REJECT,
+                "nos": "nokia",
             }
         )
-        self.assertTrue(test.is_valid())
+        self.assertTrue(test.is_valid(), test.errors)
         self.assertTrue(test.save())

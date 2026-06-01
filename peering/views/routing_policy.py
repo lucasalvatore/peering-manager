@@ -30,6 +30,7 @@ __all__ = (
     "RoutingPolicyBulkDelete",
     "RoutingPolicyBulkEdit",
     "RoutingPolicyByDeviceView",
+    "RoutingPolicyCopy",
     "RoutingPolicyConfigContext",
     "RoutingPolicyDelete",
     "RoutingPolicyEdit",
@@ -155,6 +156,70 @@ class RoutingPolicyConfigContext(ObjectConfigContextView):
     permission_required = "peering.view_routingpolicy"
     queryset = RoutingPolicy.objects.all()
     base_template = "peering/routingpolicy/_base.html"
+
+
+def _clone_policy(source, target):
+    """Replicate a policy (terms/matches/actions) onto another device."""
+    new, _ = RoutingPolicy.objects.update_or_create(
+        router=target,
+        name=source.name,
+        defaults=dict(
+            slug=source.slug, type=source.type,
+            default_action=source.default_action,
+            address_family=source.address_family, weight=source.weight,
+            description=source.description, is_template=False, nos=source.nos,
+        ),
+    )
+    new.terms.all().delete()
+    for term in source.terms.all():
+        nt = new.terms.create(
+            name=term.name, sequence=term.sequence, action=term.action,
+            description=term.description,
+        )
+        for m in term.matches.all():
+            nt.matches.create(match_type=m.match_type, values=m.values)
+        for a in term.actions.all():
+            nt.actions.create(action_type=a.action_type, value=a.value)
+    return new
+
+
+@register_model_view(RoutingPolicy, name="copy", path="copy")
+class RoutingPolicyCopy(PermissionRequiredMixin, View):
+    """Copy a policy verbatim to another device in the same site."""
+
+    permission_required = "peering.add_routingpolicy"
+    template_name = "peering/routingpolicy/copy.html"
+
+    def _candidates(self, policy):
+        from ..policy_defaults import site_of
+
+        if not policy.router:
+            return Router.objects.none()
+        site = site_of(policy.router.name)
+        ids = [
+            r.pk
+            for r in Router.objects.exclude(pk=policy.router_id)
+            if site_of(r.name) == site
+        ]
+        return Router.objects.filter(pk__in=ids).order_by("name")
+
+    def get(self, request, pk):
+        policy = get_object_or_404(RoutingPolicy, pk=pk)
+        return render(
+            request, self.template_name,
+            {"instance": policy, "candidates": self._candidates(policy)},
+        )
+
+    def post(self, request, pk):
+        policy = get_object_or_404(RoutingPolicy, pk=pk)
+        target = get_object_or_404(
+            self._candidates(policy), pk=request.POST.get("target")
+        )
+        new = _clone_policy(policy, target)
+        messages.success(
+            request, f"Copied {policy.name} to {target.name}."
+        )
+        return redirect(new.get_absolute_url())
 
 
 @register_model_view(RoutingPolicy, name="snapshot", path="snapshot")

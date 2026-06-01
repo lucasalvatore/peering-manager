@@ -30,7 +30,13 @@ from peeringdb.models import (
     NetworkIXLan,
 )
 
-from ..enums import BGPState, IPFamily, PolicyTermAction, RoutingPolicyType
+from ..enums import (
+    BGPState,
+    IPFamily,
+    NetworkOS,
+    PolicyTermAction,
+    RoutingPolicyType,
+)
 from ..fields import ASNField
 from ..functions import (
     UnresolvableIRRObjectError,
@@ -1175,6 +1181,13 @@ class RoutingPolicy(OrganisationalModel):
             "Default template for its type, used when generating and comparing "
             "per-device policies. Use {site} where the device site should go."
         ),
+    )
+    nos = models.CharField(
+        max_length=50,
+        choices=NetworkOS,
+        default=NetworkOS.NOKIA,
+        verbose_name="NOS",
+        help_text="Network OS this template targets (templates only)",
     )
     communities = models.ManyToManyField("bgp.Community", blank=True)
 

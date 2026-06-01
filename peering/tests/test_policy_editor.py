@@ -452,6 +452,75 @@ class RoutingPolicyModifiedTestCase(TestCase):
         self.assertIsNone(p.is_modified)
 
 
+class JunosRenderTestCase(SimpleTestCase):
+    def test_junos_statement(self):
+        from peering.policy_render import junos_policy_statement
+
+        term = NS(
+            name="ACCEPT-BGP", action="accept",
+            matches=[NS(match_type="protocol", values=["bgp"])],
+            actions=[NS(action_type="local-preference", value="100")],
+        )
+        pol = NS(name="RMAP-AS1-IMPORT", default_action="reject", terms=[term])
+        out = junos_policy_statement(pol)
+        self.assertIn("policy-statement RMAP-AS1-IMPORT {", out)
+        self.assertIn("term ACCEPT-BGP {", out)
+        self.assertIn("protocol bgp;", out)
+        self.assertIn("local-preference 100;", out)
+        self.assertIn("accept;", out)
+        self.assertIn("reject;", out)
+
+
+class RoutingPolicyCopyTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        from devices.models import Router
+
+        cls.src_router = Router.objects.create(name="br1-us-dal01", hostname="a")
+        cls.same_site = Router.objects.create(name="br2-us-dal01", hostname="b")
+        cls.other_site = Router.objects.create(name="br1-us-sjc01", hostname="c")
+        cls.policy = RoutingPolicy.objects.create(
+            name="RMAP-AS1-IMPORT", slug="rmap-as1-import",
+            type=RoutingPolicyType.IMPORT, router=cls.src_router,
+        )
+        PolicyTerm.objects.create(
+            routing_policy=cls.policy, name="ACCEPT-BGP", sequence=10,
+            action=PolicyTermAction.ACCEPT,
+        )
+        cls.user = get_user_model().objects.create_user(
+            username="copier", password="x", is_superuser=True, is_staff=True
+        )
+
+    def test_copy_page_lists_only_same_site(self):
+        client = Client()
+        client.force_login(self.user)
+        html = client.get(
+            reverse("peering:routingpolicy_copy", kwargs={"pk": self.policy.pk})
+        ).content.decode()
+        self.assertIn("br2-us-dal01", html)
+        self.assertNotIn("br1-us-sjc01", html)
+
+    def test_copy_clones_to_target(self):
+        client = Client()
+        client.force_login(self.user)
+        resp = client.post(
+            reverse("peering:routingpolicy_copy", kwargs={"pk": self.policy.pk}),
+            {"target": self.same_site.pk},
+        )
+        self.assertEqual(resp.status_code, 302)
+        copy = RoutingPolicy.objects.get(router=self.same_site, name="RMAP-AS1-IMPORT")
+        self.assertEqual(copy.terms.count(), 1)
+
+    def test_cannot_copy_to_other_site(self):
+        client = Client()
+        client.force_login(self.user)
+        resp = client.post(
+            reverse("peering:routingpolicy_copy", kwargs={"pk": self.policy.pk}),
+            {"target": self.other_site.pk},
+        )
+        self.assertEqual(resp.status_code, 404)
+
+
 class RoutingPolicyHistoryTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):

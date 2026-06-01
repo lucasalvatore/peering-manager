@@ -28,13 +28,17 @@ def _sub(text, site):
     return text
 
 
-def get_template(policy_type):
-    """The template RoutingPolicy for a type, or None."""
+def get_template(policy_type, nos="nokia"):
+    """The template RoutingPolicy for a (type, NOS), or None."""
     from .models import RoutingPolicy
 
-    return RoutingPolicy.objects.filter(
-        is_template=True, type=policy_type
-    ).order_by("pk").first()
+    return (
+        RoutingPolicy.objects.filter(
+            is_template=True, type=policy_type, nos=nos
+        )
+        .order_by("pk")
+        .first()
+    )
 
 
 def _spec_from(routing_policy, site):
@@ -52,9 +56,13 @@ def _spec_from(routing_policy, site):
 
 
 def default_spec(routing_policy):
-    """Expected default spec for a policy (from its type's template, with the
-    device site substituted), or None if there's no template / no site."""
-    template = get_template(routing_policy.type)
+    """Expected default spec for a policy (from the template matching its type
+    and the device's NOS, with the device site substituted), or None if there's
+    no matching template / no site."""
+    from .policy_render import device_nos
+
+    nos = device_nos(routing_policy.router) if routing_policy.router else "nokia"
+    template = get_template(routing_policy.type, nos)
     if template is None:
         return None
     site = site_of(routing_policy.router.name) if routing_policy.router else None

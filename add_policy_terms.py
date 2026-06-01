@@ -19,6 +19,7 @@ django.setup()
 
 from peering.models import RoutingPolicy  # noqa: E402
 from peering.policy_defaults import SITE_TOKEN, get_template, site_of  # noqa: E402
+from peering.policy_render import device_nos  # noqa: E402
 
 
 def clone_template_terms(policy, template, site):
@@ -47,7 +48,8 @@ for policy in RoutingPolicy.objects.filter(
     if policy.terms.exists():
         skipped_has_terms += 1
         continue
-    template = get_template(policy.type)
+    nos = device_nos(policy.router) if policy.router else "nokia"
+    template = get_template(policy.type, nos)
     if template is None:
         skipped_no_template += 1
         continue

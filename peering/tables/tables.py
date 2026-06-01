@@ -339,6 +339,7 @@ class RoutingPolicyTable(PeeringManagerTable):
         verbose_name="State",
         orderable=False,
     )
+    nos = tables.Column(verbose_name="NOS")
     communities = CommunityColumn()
     tags = columns.TagColumn(url_name="peering:routingpolicy_list")
 
@@ -353,6 +354,8 @@ class RoutingPolicyTable(PeeringManagerTable):
             "weight",
             "address_family",
             "state",
+            "nos",
+            "is_template",
             "communities",
             "tags",
             "actions",

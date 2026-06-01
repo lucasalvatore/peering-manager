@@ -2,6 +2,11 @@
 {% load helpers %}
 {% load tabs %}
 {% block actions %}
+{% if perms.peering.add_routingpolicy and instance.router %}
+<a href="{% url 'peering:routingpolicy_copy' pk=instance.pk %}" class="btn btn-primary">
+  <i class="fa-fw fa-solid fa-copy"></i> Copy to device
+</a>
+{% endif %}
 {% if perms.peering.change_routingpolicy %}
 <a href="{% url 'peering:routingpolicy_edit' pk=instance.pk %}" class="btn btn-warning">
   <i class="fa-fw fa-solid fa-edit"></i> Edit
