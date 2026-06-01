@@ -451,6 +451,29 @@ class RoutingPolicyModifiedTestCase(TestCase):
         )
         self.assertIsNone(p.is_modified)
 
+    def test_restore_to_default(self):
+        self._add_default_export_term()
+        self.policy.terms.first().actions.create(
+            action_type="local-preference", value="999"
+        )
+        self.assertIs(self.policy.is_modified, True)
+        user = get_user_model().objects.create_user(
+            username="restorer", password="x", is_superuser=True, is_staff=True
+        )
+        client = Client()
+        client.force_login(user)
+        resp = client.post(
+            reverse(
+                "peering:routingpolicy_restore_default",
+                kwargs={"pk": self.policy.pk},
+            )
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.policy.refresh_from_db()
+        self.assertIs(self.policy.is_modified, False)
+        # A version is snapshotted before restoring, so it's recoverable.
+        self.assertEqual(self.policy.versions.count(), 1)
+
 
 class JunosRenderTestCase(SimpleTestCase):
     def test_junos_statement(self):

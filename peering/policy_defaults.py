@@ -93,6 +93,29 @@ def actual_spec(routing_policy):
     return {"default_action": routing_policy.default_action, "terms": terms}
 
 
+def apply_template(routing_policy, template, site=None):
+    """Replace a policy's default-action and terms with the template's,
+    substituting the {site} token. Returns the policy."""
+    routing_policy.default_action = template.default_action
+    routing_policy.save()
+    routing_policy.terms.all().delete()
+    for term in template.terms.all():
+        new_term = routing_policy.terms.create(
+            name=term.name, sequence=term.sequence, action=term.action,
+            description=term.description,
+        )
+        for m in term.matches.all():
+            new_term.matches.create(
+                match_type=m.match_type,
+                values=[_sub(v, site) for v in (m.values or [])],
+            )
+        for a in term.actions.all():
+            new_term.actions.create(
+                action_type=a.action_type, value=_sub(a.value, site)
+            )
+    return routing_policy
+
+
 def is_modified(routing_policy):
     """True/False if the policy has a template baseline, else None.
 

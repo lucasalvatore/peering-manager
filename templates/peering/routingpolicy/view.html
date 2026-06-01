@@ -126,11 +126,20 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Saved Versions</strong>
         {% if perms.peering.change_routingpolicy %}
-        <form method="post" action="{% url 'peering:routingpolicy_snapshot' pk=instance.pk %}" class="d-flex gap-2 mb-0">
-          {% csrf_token %}
-          <input type="text" name="comment" class="form-control form-control-sm" placeholder="Optional comment" style="width:240px">
-          <button type="submit" class="btn btn-sm btn-primary text-nowrap"><i class="fa-fw fa-solid fa-floppy-disk"></i> Save version</button>
-        </form>
+        <div class="d-flex gap-2 align-items-center">
+          {% if can_restore_default %}
+          <form method="post" action="{% url 'peering:routingpolicy_restore_default' pk=instance.pk %}" class="mb-0"
+                onsubmit="return confirm('Restore this policy to the default template? Current terms will be replaced (a version is saved first).');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap"><i class="fa-fw fa-solid fa-rotate-left"></i> Restore to default</button>
+          </form>
+          {% endif %}
+          <form method="post" action="{% url 'peering:routingpolicy_snapshot' pk=instance.pk %}" class="d-flex gap-2 mb-0">
+            {% csrf_token %}
+            <input type="text" name="comment" class="form-control form-control-sm" placeholder="Optional comment" style="width:240px">
+            <button type="submit" class="btn btn-sm btn-primary text-nowrap"><i class="fa-fw fa-solid fa-floppy-disk"></i> Save version</button>
+          </form>
+        </div>
         {% endif %}
       </div>
       <table class="card-body table table-hover mb-0">

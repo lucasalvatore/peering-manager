@@ -35,6 +35,7 @@ __all__ = (
     "RoutingPolicyDelete",
     "RoutingPolicyEdit",
     "RoutingPolicyList",
+    "RoutingPolicyRestoreDefault",
     "RoutingPolicySnapshot",
     "RoutingPolicyTemplateList",
     "RoutingPolicyVersionRestore",
@@ -119,6 +120,10 @@ class RoutingPolicyView(ObjectView):
             "terms": instance.terms.all(),
             "preview": render_preview(instance),
             "versions": instance.versions.all(),
+            # Restore is offered only when there's a template baseline.
+            "can_restore_default": (
+                not instance.is_template and instance.is_modified is not None
+            ),
         }
 
 
@@ -232,6 +237,32 @@ class RoutingPolicySnapshot(PermissionRequiredMixin, View):
         policy = get_object_or_404(RoutingPolicy, pk=pk)
         version = record(policy, comment=request.POST.get("comment", "").strip())
         messages.success(request, f"Saved version from {version.created:%Y-%m-%d %H:%M}.")
+        return redirect(policy.get_absolute_url())
+
+
+@register_model_view(RoutingPolicy, name="restore_default", path="restore-default")
+class RoutingPolicyRestoreDefault(PermissionRequiredMixin, View):
+    """Re-apply the default template to this policy (snapshotting first)."""
+
+    permission_required = "peering.change_routingpolicy"
+
+    def post(self, request, pk):
+        from ..policy_defaults import apply_template, get_template, site_of
+        from ..policy_render import device_nos
+
+        policy = get_object_or_404(RoutingPolicy, pk=pk)
+        nos = device_nos(policy.router) if policy.router else policy.nos
+        template = get_template(policy.type, nos)
+        if template is None:
+            messages.error(
+                request, "No default template exists for this policy's type/NOS."
+            )
+            return redirect(policy.get_absolute_url())
+        # Snapshot first so the pre-restore state can be recovered.
+        record(policy, comment="Before restore to default")
+        site = site_of(policy.router.name) if policy.router else None
+        apply_template(policy, template, site)
+        messages.success(request, "Restored to the default template.")
         return redirect(policy.get_absolute_url())
 
 
