@@ -898,6 +898,7 @@ class RoutingPolicyForm(PeeringManagerModelForm):
                 "weight",
                 "address_family",
                 "default_action",
+                "is_template",
             ),
         ),
     )
@@ -914,6 +915,7 @@ class RoutingPolicyForm(PeeringManagerModelForm):
             "weight",
             "address_family",
             "default_action",
+            "is_template",
             "tags",
         )
 
@@ -1018,6 +1020,11 @@ class RoutingPolicyFilterForm(PeeringManagerModelFilterSetForm):
     model = RoutingPolicy
     router = DynamicModelMultipleChoiceField(
         required=False, queryset=Router.objects.all(), label="Device"
+    )
+    is_template = forms.NullBooleanField(
+        required=False,
+        label="Template",
+        widget=StaticSelect(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     type = forms.MultipleChoiceField(
         required=False,

@@ -1,19 +1,19 @@
 """
-Compare a routing policy against the standard generated template, so the UI can
-flag policies that have been customised ("modified from the default").
+Default policy templates.
 
-The template mirrors what scripts/add_policy_terms.py applies:
-  import: SET-COMMUNITIES (next-entry, community-add CLIST-<SITE>-TRANSIT)
-          + ACCEPT-BGP (protocol bgp, accept, local-preference 100)
-  export: ACCEPT-PUBLIC-AGGREGATES (prefix-list V4/V6 aggregates, accept)
-both with a reject default-action.
+The "default" for a policy type is an editable template policy (a RoutingPolicy
+with ``is_template=True`` and no router). Both per-device policy generation and
+the "modified from default" comparison read from these templates, so editing a
+template in the UI re-bases everything.
+
+Templates use the token ``{site}`` wherever the per-device site belongs (e.g. a
+community value ``CLIST-{site}-TRANSIT``); it is expanded to the device's site
+(br1-us-sjc01 -> US-SJC01) when generating/comparing.
 """
 
 from __future__ import annotations
 
-from .enums import PolicyTermAction, RoutingPolicyType
-
-PUBLIC_AGGREGATES = ["PLIST-V4-PUBLIC-AGGREGATES", "PLIST-V6-PUBLIC-AGGREGATES"]
+SITE_TOKEN = "{site}"
 
 
 def site_of(router_name: str) -> str:
@@ -22,41 +22,56 @@ def site_of(router_name: str) -> str:
     return "-".join(parts[1:]).upper()
 
 
-def _term(name, action, matches, actions):
-    # matches/actions as frozensets so ordering within a term doesn't matter.
-    return (
-        name,
-        action,
-        frozenset((m, tuple(v)) for m, v in matches),
-        frozenset(actions),
-    )
+def _sub(text, site):
+    if isinstance(text, str) and SITE_TOKEN in text:
+        return text.replace(SITE_TOKEN, site) if site else text
+    return text
+
+
+def get_template(policy_type):
+    """The template RoutingPolicy for a type, or None."""
+    from .models import RoutingPolicy
+
+    return RoutingPolicy.objects.filter(
+        is_template=True, type=policy_type
+    ).order_by("pk").first()
+
+
+def _spec_from(routing_policy, site):
+    terms = []
+    for term in routing_policy.terms.all():
+        matches = frozenset(
+            (m.match_type, tuple(_sub(v, site) for v in (m.values or [])))
+            for m in term.matches.all()
+        )
+        actions = frozenset(
+            (a.action_type, _sub(a.value, site)) for a in term.actions.all()
+        )
+        terms.append((term.name, term.action, matches, actions))
+    return {"default_action": routing_policy.default_action, "terms": terms}
 
 
 def default_spec(routing_policy):
-    """Expected default term spec for a templated policy, or None if the policy
-    type isn't one we generate a template for (or lacks the data to derive it)."""
-    if routing_policy.type == RoutingPolicyType.IMPORT:
-        if not routing_policy.router:
-            return None
-        community = f"CLIST-{site_of(routing_policy.router.name)}-TRANSIT"
-        return {
-            "default_action": PolicyTermAction.REJECT,
-            "terms": [
-                _term("SET-COMMUNITIES", PolicyTermAction.NEXT_ENTRY, [],
-                      [("community-add", community)]),
-                _term("ACCEPT-BGP", PolicyTermAction.ACCEPT,
-                      [("protocol", ["bgp"])], [("local-preference", "100")]),
-            ],
-        }
-    if routing_policy.type == RoutingPolicyType.EXPORT:
-        return {
-            "default_action": PolicyTermAction.REJECT,
-            "terms": [
-                _term("ACCEPT-PUBLIC-AGGREGATES", PolicyTermAction.ACCEPT,
-                      [("prefix-list", PUBLIC_AGGREGATES)], []),
-            ],
-        }
-    return None
+    """Expected default spec for a policy (from its type's template, with the
+    device site substituted), or None if there's no template / no site."""
+    template = get_template(routing_policy.type)
+    if template is None:
+        return None
+    site = site_of(routing_policy.router.name) if routing_policy.router else None
+    # If the template references {site} but we have no device, we can't compare.
+    if site is None and _template_needs_site(template):
+        return None
+    return _spec_from(template, site)
+
+
+def _template_needs_site(template):
+    for term in template.terms.all():
+        if any(SITE_TOKEN in (a.value or "") for a in term.actions.all()):
+            return True
+        for m in term.matches.all():
+            if any(SITE_TOKEN in v for v in (m.values or [])):
+                return True
+    return False
 
 
 def actual_spec(routing_policy):
@@ -71,7 +86,11 @@ def actual_spec(routing_policy):
 
 
 def is_modified(routing_policy):
-    """True/False if the policy is templated, else None (no baseline to compare)."""
+    """True/False if the policy has a template baseline, else None.
+
+    Templates themselves are never flagged as modified."""
+    if routing_policy.is_template:
+        return None
     expected = default_spec(routing_policy)
     if expected is None:
         return None

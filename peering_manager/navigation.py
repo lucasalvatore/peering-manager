@@ -97,6 +97,10 @@ NAVIGATION: list[MenuItem | MenuGroup] = [
                 label="Policies by Device",
                 url_name="peering:routingpolicy_bydevice",
             ),
+            MenuItem(
+                label="Policy Templates",
+                url_name="peering:routingpolicy_templates",
+            ),
         ],
     ),
     MenuGroup(

@@ -402,6 +402,19 @@ class RoutingPolicyModifiedTestCase(TestCase):
         from devices.models import Router
 
         cls.router = Router.objects.create(name="br1-us-sjc01", hostname="x")
+        # Editable export template (the baseline for export policies).
+        cls.template = RoutingPolicy.objects.create(
+            name="_DEFAULT-EXPORT", slug="_default-export",
+            type=RoutingPolicyType.EXPORT, is_template=True,
+        )
+        tt = PolicyTerm.objects.create(
+            routing_policy=cls.template, name="ACCEPT-PUBLIC-AGGREGATES",
+            sequence=10, action=PolicyTermAction.ACCEPT,
+        )
+        TermMatch.objects.create(
+            term=tt, match_type="prefix-list",
+            values=["PLIST-V4-PUBLIC-AGGREGATES", "PLIST-V6-PUBLIC-AGGREGATES"],
+        )
         cls.policy = RoutingPolicy.objects.create(
             name="RMAP-AS1-EXPORT", slug="rmap-as1-export",
             type=RoutingPolicyType.EXPORT, router=cls.router,
@@ -418,7 +431,7 @@ class RoutingPolicyModifiedTestCase(TestCase):
         )
         return t
 
-    def test_matches_default(self):
+    def test_matches_template(self):
         self._add_default_export_term()
         self.assertIs(self.policy.is_modified, False)
 
@@ -427,10 +440,14 @@ class RoutingPolicyModifiedTestCase(TestCase):
         t.actions.create(action_type="local-preference", value="200")
         self.assertIs(self.policy.is_modified, True)
 
-    def test_no_baseline_returns_none(self):
+    def test_template_itself_is_not_flagged(self):
+        self.assertIsNone(self.template.is_modified)
+
+    def test_no_template_for_type_returns_none(self):
+        # No import template exists, so import policies have no baseline.
         p = RoutingPolicy.objects.create(
-            name="CUSTOM-THING", slug="custom-thing",
-            type=RoutingPolicyType.IMPORT, router=None,
+            name="RMAP-AS1-IMPORT", slug="rmap-as1-import",
+            type=RoutingPolicyType.IMPORT, router=self.router,
         )
         self.assertIsNone(p.is_modified)
 

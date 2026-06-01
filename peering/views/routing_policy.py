@@ -35,6 +35,7 @@ __all__ = (
     "RoutingPolicyEdit",
     "RoutingPolicyList",
     "RoutingPolicySnapshot",
+    "RoutingPolicyTemplateList",
     "RoutingPolicyVersionRestore",
     "RoutingPolicyView",
 )
@@ -83,6 +84,20 @@ class RoutingPolicyByDeviceView(PermissionRequiredMixin, View):
 class RoutingPolicyList(ObjectListView):
     permission_required = "peering.view_routingpolicy"
     queryset = RoutingPolicy.objects.select_related("router").prefetch_related(
+        "terms__matches", "terms__actions"
+    )
+    filterset = RoutingPolicyFilterSet
+    filterset_form = RoutingPolicyFilterForm
+    table = RoutingPolicyTable
+    template_name = "peering/routingpolicy/list.html"
+
+
+@register_model_view(
+    RoutingPolicy, name="templates", path="templates", detail=False
+)
+class RoutingPolicyTemplateList(ObjectListView):
+    permission_required = "peering.view_routingpolicy"
+    queryset = RoutingPolicy.objects.filter(is_template=True).prefetch_related(
         "terms__matches", "terms__actions"
     )
     filterset = RoutingPolicyFilterSet

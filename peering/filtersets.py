@@ -381,7 +381,7 @@ class RoutingPolicyFilterSet(OrganisationalModelFilterSet):
 
     class Meta:
         model = RoutingPolicy
-        fields = ["id", "weight", "address_family", "router"]
+        fields = ["id", "weight", "address_family", "router", "is_template"]
 
     def type_search(self, queryset, name, value):
         qs_filter = Q(type=RoutingPolicyType.IMPORT_EXPORT)

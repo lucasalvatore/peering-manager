@@ -1169,6 +1169,13 @@ class RoutingPolicy(OrganisationalModel):
         blank=True,
         help_text="Device that owns this policy",
     )
+    is_template = models.BooleanField(
+        default=False,
+        help_text=(
+            "Default template for its type, used when generating and comparing "
+            "per-device policies. Use {site} where the device site should go."
+        ),
+    )
     communities = models.ManyToManyField("bgp.Community", blank=True)
 
     class Meta:
