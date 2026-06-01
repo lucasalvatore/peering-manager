@@ -50,6 +50,12 @@ class CommunityView(ObjectView):
 class CommunityEdit(ObjectEditView):
     queryset = Community.objects.all()
     form = CommunityForm
+    template_name = "bgp/community/edit.html"
+
+    def get_extra_context(self, request, instance):
+        return {
+            "initial_members": instance.members if instance and instance.pk else [],
+        }
 
 
 @register_model_view(Community, name="delete")

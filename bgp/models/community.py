@@ -14,16 +14,28 @@ __all__ = ("Community",)
 
 
 class Community(OrganisationalModel):
-    value = CommunityField(max_length=50)
+    # A community may be a single value (legacy / session tagging) or a named
+    # list of member values (Nokia SR OS community list, e.g. CLIST-...).
+    value = CommunityField(max_length=50, blank=True, null=True)
+    members = models.JSONField(
+        blank=True, default=list, help_text="List of member community values"
+    )
     type = models.CharField(max_length=50, choices=CommunityType, blank=True, null=True)
 
     class Meta:
         verbose_name_plural = "communities"
-        ordering = ["value", "name"]
+        ordering = ["name"]
+
+    @property
+    def all_values(self) -> list:
+        """Member values, falling back to the single value if no members."""
+        if self.members:
+            return list(self.members)
+        return [self.value] if self.value else []
 
     @property
     def kind(self) -> str | None:
-        if not settings.VALIDATE_BGP_COMMUNITY_VALUE:
+        if not settings.VALIDATE_BGP_COMMUNITY_VALUE or not self.value:
             return None
         try:
             return get_community_kind(self.value)

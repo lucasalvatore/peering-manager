@@ -10,14 +10,13 @@ class CommunityTest(TestCase):
     def test_community_form(self):
         test = CommunityForm(
             data={
-                "name": "test",
-                "slug": "test",
-                "value": "64500:1",
-                "type": CommunityType.EGRESS,
+                "name": "CLIST-FOO",
+                "members": ["1299:333", "1299:444", "1299:555"],
             }
         )
-        self.assertTrue(test.is_valid())
-        self.assertTrue(test.save())
+        self.assertTrue(test.is_valid(), test.errors)
+        obj = test.save()
+        self.assertEqual(obj.members, ["1299:333", "1299:444", "1299:555"])
 
 
 class Relationshipest(TestCase):

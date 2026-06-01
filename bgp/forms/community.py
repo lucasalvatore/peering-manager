@@ -18,38 +18,20 @@ __all__ = ("CommunityBulkEditForm", "CommunityFilterForm", "CommunityForm")
 
 
 class CommunityForm(AutoSlugMixin, PeeringManagerModelForm):
-    type = forms.ChoiceField(
-        required=False,
-        choices=add_blank_choice(CommunityType),
-        widget=StaticSelect,
-        help_text="Optional, Ingress for received routes, Egress for advertised routes",
-    )
+    # Built by the row editor in templates/bgp/community/edit.html (one member
+    # value per row) and submitted as a JSON list of strings.
+    members = JSONField(required=False, widget=forms.HiddenInput())
     tags = TagField(required=False)
-    fieldsets = (
-        (
-            "Community",
-            (
-                "name",
-                "description",
-                "type",
-                "value",
-            ),
-        ),
-    )
+    fieldsets = (("Community", ("name", "description")),)
 
     class Meta:
         model = Community
-
         fields = (
             "name",
             "description",
-            "type",
-            "value",
+            "members",
             "tags",
         )
-        help_texts = {
-            "value": 'Community (<a target="_blank" href="https://tools.ietf.org/html/rfc1997">RFC1997</a>), Extended Community (<a target="_blank" href="https://tools.ietf.org/html/rfc4360">RFC4360</a>) or Large Community (<a target="_blank" href="https://tools.ietf.org/html/rfc8092">RFC8092</a>)'
-        }
 
 
 class CommunityBulkEditForm(PeeringManagerModelBulkEditForm):

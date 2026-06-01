@@ -24,12 +24,18 @@ class CommunityColumn(tables.ManyToManyColumn):
         return obj.name if obj else None
 
 
+MEMBER_COUNT = "{{ record.members|length }}"
+
+
 class CommunityTable(PeeringManagerTable):
     name = tables.Column(linkify=True)
+    member_count = tables.TemplateColumn(
+        template_code=MEMBER_COUNT, verbose_name="Members", orderable=False
+    )
     type = tables.TemplateColumn(template_code=COMMUNITY_TYPE)
     tags = columns.TagColumn(url_name="bgp:community_list")
 
     class Meta(PeeringManagerTable.Meta):
         model = Community
-        fields = ("pk", "name", "slug", "value", "type", "tags", "actions")
-        default_columns = ("pk", "name", "value", "type", "actions")
+        fields = ("pk", "name", "slug", "value", "member_count", "type", "tags", "actions")
+        default_columns = ("pk", "name", "member_count", "value", "actions")

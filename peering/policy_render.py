@@ -150,8 +150,15 @@ def render_as_path(obj) -> str:
 
 
 def render_community(obj) -> str:
-    """Preview a `bgp.Community` in device syntax."""
-    return f'community "{obj.name}" {{\n{INDENT}member "{obj.value}" {{ }}\n}}'
+    """Preview a `bgp.Community` (named member list) in device syntax."""
+    values = obj.members if getattr(obj, "members", None) else (
+        [obj.value] if obj.value else []
+    )
+    lines = [f'community "{obj.name}" {{']
+    for value in values:
+        lines.append(f'{INDENT}member "{value}" {{ }}')
+    lines.append("}")
+    return "\n".join(lines)
 
 
 def referenced_object_keys(routing_policy) -> set:

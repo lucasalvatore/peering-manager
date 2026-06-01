@@ -20,6 +20,7 @@ class CommunitySerializer(PeeringManagerModelSerializer):
             "slug",
             "description",
             "value",
+            "members",
             "type",
             "kind",
             "local_context_data",

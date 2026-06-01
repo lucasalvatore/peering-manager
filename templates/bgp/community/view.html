@@ -22,16 +22,24 @@
         </tr>
         {% endif %}
         {% endwith %}
-        {% if instance.type %}
-        <tr>
-          <td>Type</td>
-          <td>{{ instance.get_type_html }}</td>
-        </tr>
-        {% endif %}
+        {% if instance.value %}
         <tr>
           <td>Value</td>
           <td><code>{{ instance.value }}</code></td>
         </tr>
+        {% endif %}
+      </table>
+    </div>
+    <div class="card mt-3">
+      <div class="card-header"><strong>Members</strong></div>
+      <table class="card-body table table-hover mb-0">
+        <tbody>
+          {% for member in instance.members %}
+          <tr><td><code>{{ member }}</code></td></tr>
+          {% empty %}
+          <tr><td class="text-muted">No members defined.</td></tr>
+          {% endfor %}
+        </tbody>
       </table>
     </div>
   </div>

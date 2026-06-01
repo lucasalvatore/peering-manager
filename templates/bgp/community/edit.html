@@ -1,0 +1,84 @@
+{% extends 'generic/edit.html' %}
+{% load helpers %}
+{% load form_helpers %}
+
+{% block form %}
+{# Hidden fields (incl. the members JSON the editor writes to) #}
+{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+<div class="card mb-3">
+  <div class="card-header"><strong>Community</strong></div>
+  <div class="card-body">
+    {% render_field form.name %}
+    {% render_field form.description %}
+  </div>
+</div>
+
+{{ initial_members|json_script:"initial-members" }}
+
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <strong>Members</strong>
+    <button type="button" class="btn btn-sm btn-primary" id="add-member">
+      <i class="fa-fw fa-solid fa-plus"></i> Add member
+    </button>
+  </div>
+  <div class="card-body">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Community value</th><th style="width:1%"></th></tr></thead>
+      <tbody id="member-rows"></tbody>
+    </table>
+    <small class="text-muted">One community value per row, e.g. <code>1299:333</code>, <code>65001:100</code></small>
+  </div>
+</div>
+
+{% if form.tags %}
+<div class="card mb-3">
+  <div class="card-header"><strong>Tags</strong></div>
+  <div class="card-body">{% render_field form.tags %}</div>
+</div>
+{% endif %}
+
+<script type="text/javascript">
+(function () {
+  function readSeed(hiddenId, scriptId) {
+    const hidden = document.getElementById(hiddenId);
+    if (hidden && hidden.value.trim()) {
+      try {
+        const parsed = JSON.parse(hidden.value);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) { /* fall through */ }
+    }
+    try {
+      return JSON.parse(document.getElementById(scriptId).textContent) || [];
+    } catch (e) { return []; }
+  }
+
+  function addRow(value) {
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      `<td><input type="text" class="form-control form-control-sm member-value" value="${value == null ? "" : value}" placeholder="1299:333"></td>` +
+      `<td><button type="button" class="btn btn-sm btn-danger row-remove"><i class="fa-fw fa-solid fa-trash"></i></button></td>`;
+    tr.querySelector(".row-remove").addEventListener("click", () => tr.remove());
+    document.getElementById("member-rows").appendChild(tr);
+  }
+
+  function collect() {
+    const out = [];
+    document.querySelectorAll("#member-rows .member-value").forEach(inp => {
+      const v = inp.value.trim();
+      if (v) out.push(v);
+    });
+    return out;
+  }
+
+  const field = document.getElementById("id_members");
+  field.closest("form").addEventListener("submit", function () {
+    field.value = JSON.stringify(collect());
+  });
+
+  readSeed("id_members", "initial-members").forEach(addRow);
+  document.getElementById("add-member").addEventListener("click", () => addRow(""));
+})();
+</script>
+{% endblock form %}

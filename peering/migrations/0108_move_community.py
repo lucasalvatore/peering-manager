@@ -15,6 +15,9 @@ class Migration(migrations.Migration):
     dependencies = [
         ("bgp", "0003_move_community"),
         ("peering", "0107_autonomoussystem_bgpq_overrides"),
+        # Router.communities must be re-pointed to bgp.community (devices/0010)
+        # before peering.community is removed from state here.
+        ("devices", "0010_move_community"),
     ]
 
     operations = [
