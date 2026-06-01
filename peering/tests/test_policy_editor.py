@@ -560,6 +560,51 @@ class RoutingPolicyCopyTestCase(TestCase):
         self.assertEqual(resp.status_code, 404)
 
 
+class RenderedPoliciesApiTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        from devices.models import Router
+
+        cls.router = Router.objects.create(name="br1-us-dal01", hostname="a")
+        policy = RoutingPolicy.objects.create(
+            name="RMAP-AS1-IMPORT", slug="rmap-as1-import",
+            type=RoutingPolicyType.IMPORT, router=cls.router,
+        )
+        PolicyTerm.objects.create(
+            routing_policy=policy, name="ACCEPT-BGP", sequence=10,
+            action=PolicyTermAction.ACCEPT,
+        )
+        cls.user = get_user_model().objects.create_user(
+            username="apiuser", password="x", is_superuser=True, is_staff=True
+        )
+
+    def _client(self):
+        from rest_framework.test import APIClient
+
+        client = APIClient()
+        client.force_authenticate(self.user)
+        return client
+
+    def test_rendered_policies_by_device_name(self):
+        resp = self._client().get(
+            "/api/devices/routers/rendered-policies/", {"device": "br1-us-dal01"}
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["device"], "br1-us-dal01")
+        self.assertIn("policy-statement", data["preview"])
+
+    def test_unknown_device_returns_404(self):
+        resp = self._client().get(
+            "/api/devices/routers/rendered-policies/", {"device": "nope"}
+        )
+        self.assertEqual(resp.status_code, 404)
+
+    def test_missing_param_returns_400(self):
+        resp = self._client().get("/api/devices/routers/rendered-policies/")
+        self.assertEqual(resp.status_code, 400)
+
+
 class RoutingPolicyHistoryTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):

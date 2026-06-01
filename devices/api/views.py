@@ -1,6 +1,6 @@
 from django.conf import settings
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -377,3 +377,59 @@ class RouterViewSet(PeeringManagerModelViewSet):
             JobSerializer(jobs, many=True, context={"request": request}).data,
             status=status.HTTP_202_ACCEPTED,
         )
+
+    def _rendered_policies_payload(self, router):
+        from peering.policy_render import device_nos, nos_label, render_policies
+
+        nos = device_nos(router)
+        policies = router.routing_policies.order_by("type", "name")
+        return {
+            "device": router.name,
+            "nos": nos,
+            "nos_label": nos_label(nos),
+            "preview": render_policies(policies),
+        }
+
+    @extend_schema(
+        operation_id="devices_routers_rendered_policies",
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Rendered policy-options for all of the device's policies.",
+            )
+        },
+    )
+    @action(detail=True, methods=["get"], url_path="rendered-policies")
+    def rendered_policies(self, request, pk=None):
+        return Response(self._rendered_policies_payload(self.get_object()))
+
+    @extend_schema(
+        operation_id="devices_routers_rendered_policies_by_name",
+        parameters=[
+            OpenApiParameter(
+                "device", OpenApiTypes.STR, required=True,
+                description="Device (router) name.",
+            )
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                description="Rendered policy-options for the named device.",
+            )
+        },
+    )
+    @action(detail=False, methods=["get"], url_path="rendered-policies")
+    def rendered_policies_by_name(self, request):
+        name = request.query_params.get("device") or request.query_params.get("name")
+        if not name:
+            return Response(
+                {"detail": "Provide ?device=<name>."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        router = self.get_queryset().filter(name=name).first()
+        if router is None:
+            return Response(
+                {"detail": f"No device named {name!r}."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(self._rendered_policies_payload(router))
