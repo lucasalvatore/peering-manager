@@ -890,6 +890,14 @@ class RoutingPolicyForm(PeeringManagerModelForm):
         choices=NetworkOS, widget=StaticSelect, label="NOS",
         help_text="Network OS this template targets (templates only)",
     )
+    apply_template = forms.ModelChoiceField(
+        required=False,
+        queryset=RoutingPolicy.objects.filter(is_template=True),
+        widget=StaticSelect,
+        label="Apply default template",
+        help_text="Optionally pre-fill this policy's terms from a template "
+        "(replaces any existing terms).",
+    )
     tags = TagField(required=False)
     fieldsets = (
         (
@@ -907,6 +915,7 @@ class RoutingPolicyForm(PeeringManagerModelForm):
                 "nos",
             ),
         ),
+        ("Initialise", ("apply_template",)),
     )
 
     class Meta:
@@ -925,6 +934,23 @@ class RoutingPolicyForm(PeeringManagerModelForm):
             "nos",
             "tags",
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Distinguish same-named templates by NOS + type in the dropdown.
+        self.fields["apply_template"].label_from_instance = (
+            lambda t: f"{t.name} ({t.get_nos_display()}, {t.get_type_display()})"
+        )
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        template = self.cleaned_data.get("apply_template")
+        if template:
+            from .policy_defaults import apply_template, site_of
+
+            site = site_of(instance.router.name) if instance.router else None
+            apply_template(instance, template, site)
+        return instance
 
 
 class PolicyTermForm(PeeringManagerModelForm):

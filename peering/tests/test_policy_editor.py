@@ -451,6 +451,22 @@ class RoutingPolicyModifiedTestCase(TestCase):
         )
         self.assertIsNone(p.is_modified)
 
+    def test_apply_template_on_create(self):
+        from peering.forms import RoutingPolicyForm
+
+        form = RoutingPolicyForm(data={
+            "router": self.router.pk, "name": "RMAP-NEW-EXPORT",
+            "slug": "rmap-new-export", "type": RoutingPolicyType.EXPORT,
+            "weight": 0, "address_family": 0,
+            "default_action": PolicyTermAction.REJECT, "nos": "nokia",
+            "apply_template": self.template.pk,
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        policy = form.save()
+        self.assertEqual(
+            [t.name for t in policy.terms.all()], ["ACCEPT-PUBLIC-AGGREGATES"]
+        )
+
     def test_restore_to_default(self):
         self._add_default_export_term()
         self.policy.terms.first().actions.create(
