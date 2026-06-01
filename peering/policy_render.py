@@ -65,6 +65,13 @@ def device_nos(router) -> str:
     return NOS_BY_DRIVER.get(driver, "nokia")
 
 
+def nos_label(nos: str) -> str:
+    """Human label for a NOS key (e.g. 'nokia' -> 'Nokia SR OS')."""
+    from .enums import NetworkOS
+
+    return dict(NetworkOS.CHOICES).get(nos, nos)
+
+
 def policy_nos(policy) -> str:
     """Which NOS to render a policy in: a template's declared NOS, else the
     owning device's NOS, else Nokia."""

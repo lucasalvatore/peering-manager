@@ -114,11 +114,12 @@ class RoutingPolicyView(ObjectView):
     queryset = RoutingPolicy.objects.all()
 
     def get_extra_context(self, request, instance):
-        from ..policy_render import render_preview
+        from ..policy_render import nos_label, policy_nos, render_preview
 
         return {
             "terms": instance.terms.all(),
             "preview": render_preview(instance),
+            "preview_nos": nos_label(policy_nos(instance)),
             "versions": instance.versions.all(),
             # Restore is offered only when there's a template baseline.
             "can_restore_default": (

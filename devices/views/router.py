@@ -199,10 +199,11 @@ class RouterPolicyPreview(ObjectView):
     )
 
     def get_extra_context(self, request, instance):
-        from peering.policy_render import render_policies
+        from peering.policy_render import device_nos, nos_label, render_policies
 
         return {
             "preview": render_policies(
                 instance.routing_policies.order_by("type", "name")
-            )
+            ),
+            "preview_nos": nos_label(device_nos(instance)),
         }
