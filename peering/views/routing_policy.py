@@ -82,7 +82,9 @@ class RoutingPolicyByDeviceView(PermissionRequiredMixin, View):
 @register_model_view(RoutingPolicy, name="list", path="", detail=False)
 class RoutingPolicyList(ObjectListView):
     permission_required = "peering.view_routingpolicy"
-    queryset = RoutingPolicy.objects.all()
+    queryset = RoutingPolicy.objects.select_related("router").prefetch_related(
+        "terms__matches", "terms__actions"
+    )
     filterset = RoutingPolicyFilterSet
     filterset_form = RoutingPolicyFilterForm
     table = RoutingPolicyTable

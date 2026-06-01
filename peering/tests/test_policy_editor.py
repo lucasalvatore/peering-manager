@@ -396,6 +396,45 @@ class RoutingPolicyNamingTestCase(TestCase):
             dup.full_clean()
 
 
+class RoutingPolicyModifiedTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        from devices.models import Router
+
+        cls.router = Router.objects.create(name="br1-us-sjc01", hostname="x")
+        cls.policy = RoutingPolicy.objects.create(
+            name="RMAP-AS1-EXPORT", slug="rmap-as1-export",
+            type=RoutingPolicyType.EXPORT, router=cls.router,
+        )
+
+    def _add_default_export_term(self):
+        t = PolicyTerm.objects.create(
+            routing_policy=self.policy, name="ACCEPT-PUBLIC-AGGREGATES",
+            sequence=10, action=PolicyTermAction.ACCEPT,
+        )
+        TermMatch.objects.create(
+            term=t, match_type="prefix-list",
+            values=["PLIST-V4-PUBLIC-AGGREGATES", "PLIST-V6-PUBLIC-AGGREGATES"],
+        )
+        return t
+
+    def test_matches_default(self):
+        self._add_default_export_term()
+        self.assertIs(self.policy.is_modified, False)
+
+    def test_detects_modification(self):
+        t = self._add_default_export_term()
+        t.actions.create(action_type="local-preference", value="200")
+        self.assertIs(self.policy.is_modified, True)
+
+    def test_no_baseline_returns_none(self):
+        p = RoutingPolicy.objects.create(
+            name="CUSTOM-THING", slug="custom-thing",
+            type=RoutingPolicyType.IMPORT, router=None,
+        )
+        self.assertIsNone(p.is_modified)
+
+
 class RoutingPolicyHistoryTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):

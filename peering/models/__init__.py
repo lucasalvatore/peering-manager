@@ -1207,6 +1207,22 @@ class RoutingPolicy(OrganisationalModel):
 
         return mark_safe(f'<span class="badge {badge_type}">{text}</span>')
 
+    @property
+    def is_modified(self):
+        """True/False if this policy is templated and differs from the default,
+        or None if there is no template baseline to compare against."""
+        from ..policy_defaults import is_modified
+
+        return is_modified(self)
+
+    def get_modified_html(self):
+        modified = self.is_modified
+        if modified is None:
+            return ""
+        if modified:
+            return mark_safe('<span class="badge text-bg-warning">Modified</span>')
+        return mark_safe('<span class="badge text-bg-success">Default</span>')
+
 
 class PolicyTerm(ChangeLoggedModel):
     """
